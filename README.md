@@ -35,6 +35,18 @@
 
 Everything you make is also in your library on zetta3d.ai, and everything you made there shows up in Unity.
 
+### Meet the Zetta Agent
+
+The **Zetta Agent** is a game-development assistant that lives in the Unity Editor and understands Unity the way
+a Unity developer does. It knows your project's setup — Unity version, render pipeline, input system, packages,
+scenes, tags and layers — and reads your hierarchy, components and scripts before it touches anything.
+
+Then it does the work with Unity's own tools: it writes and fixes C#, builds scenes, GameObjects, components,
+prefabs and materials, sets any property in the Inspector, runs Editor menu items, tests in Play Mode and reads
+the Console. It looks at the Scene and Game views to check what it built, and makes the 3D models and images your
+game needs with Zetta 3D. You stay in charge: every change can be undone, by default it asks before anything risky,
+and you can stop it at any moment. [More about the agent ↓](#the-zetta-agent)
+
 <!-- Screenshot: the whole Editor with the Agent docked and a generated model in the scene.
 <p align="center">
   <img alt="The Unity Editor with the Zetta Agent docked beside the Scene view" src="Documentation~/images/editor.png" width="100%">
@@ -163,9 +175,9 @@ pipelines as on [zetta3d.ai/pipelines](https://zetta3d.ai/pipelines).
 
 ## The Zetta Agent
 
-**Window › Zetta 3D › Agent** — a game-building assistant that works in your open project. Tell it what you want
-in plain words: *"add a third-person controller with a follow camera"*, *"make the coins spin and add a score
-UI"*, *"generate a low-poly treasure chest and put it next to the player"*.
+**Window › Zetta 3D › Agent** — a game-development assistant with a full understanding of Unity, working directly
+in your open project. Tell it what you want in plain words, the way you'd brief a teammate, and it plans the work,
+does it in the Editor, and checks the result.
 
 <!-- Screenshot: the Agent in the middle of a task — a few steps done, and a card asking you to pick a prefab.
 <p align="center">
@@ -173,19 +185,60 @@ UI"*, *"generate a low-poly treasure chest and put it next to the player"*.
 </p>
 -->
 
-### What it can do
+### How it works
 
-- **See your scene.** It reads the hierarchy, components and scripts, and looks at the Scene or Game view — from
-  around an object or from above — to check its own work.
-- **Work in the Editor.** It writes and edits C#, waits for Unity to compile and fixes any errors, creates
-  GameObjects, components, prefabs, materials and scenes, sets properties, runs menu items and enters Play Mode.
-  **Every change goes on the Undo stack.**
-- **Make the art.** It draws images, generates 3D models, runs the finishing tools (retopology, Smart UV,
-  texturing, rigging, segmentation), then imports and places the results.
-- **Build pipelines.** Describe a recipe — *"generate, retopologize, texture and rig a set of props"* — and it
-  builds the pipeline, runs it on your pictures or models, follows the runs and imports what they make.
-- **Remember.** It keeps notes and a project brief per project, plus your preferences across projects. Open
-  **Memory** to see, edit or delete any of it. Your conversations are in **History**.
+1. **Understand.** With every message it gets a picture of your project — Unity version, target platform, render
+   pipeline (Built-in, URP or HDRP), color space, input system, scripting backend, packages, open scenes, the
+   hierarchy, your selection and any compile errors — and it reads further wherever the task needs it.
+2. **Plan.** It works out what to change, following the conventions already in your project rather than its own.
+3. **Build.** It makes the changes in the Editor with Unity's own tools, one visible step at a time in the chat.
+4. **Check.** It waits for scripts to compile and fixes any errors, reads the Console, enters Play Mode, and looks
+   at the Scene or Game view to see whether the result is right — then tells you what it did and how to try it.
+
+### What it understands
+
+- **Your project:** Unity version and platform, render pipeline, color space, input system (old, new or both),
+  scripting backend, installed packages, build scenes, tags, layers and folder layout.
+- **Your scenes:** every open scene's hierarchy, each object's components and their serialized values, and what
+  you have selected.
+- **Your code:** it reads and searches your scripts, knows the current compile errors, and reads the Console's
+  errors, warnings and logs.
+- **What things look like:** it captures the Scene or Game view — the current angle, from around an object or
+  from above — and actually looks at the picture.
+- **Your Zetta 3D library:** every model you've made, so it can reuse one before making something new.
+
+### What it can do in Unity
+
+| Area | What it does |
+|---|---|
+| **Scripts** | Writes new C# scripts and edits existing ones, waits for compilation and fixes its own errors |
+| **Scenes and objects** | Creates, opens and saves scenes; creates, moves, renames, reparents, tags, activates and deletes GameObjects; creates primitives and prefab instances |
+| **Components** | Adds and removes components — Unity's or your own scripts — and sets any serialized property: numbers, vectors, colors, enums, references to objects and assets |
+| **Prefabs and materials** | Saves objects as prefabs, creates materials for your render pipeline and assigns them |
+| **Assets** | Finds, moves and organizes assets; saves generated images as textures or sprites |
+| **Testing** | Enters, pauses and exits Play Mode, reads the Console, and looks at the Game view |
+| **The Editor itself** | Runs Editor menu items, and undoes its own steps when you ask |
+| **3D models and images** | Generates 3D models, runs the finishing tools (retopology, Smart UV, texturing, rigging, segmentation), draws images, then imports and places the results |
+| **Pipelines** | Builds a pipeline from a description, runs it on your pictures or models, follows the runs and imports what they make |
+
+**Every change it makes goes on the Undo stack**, named after what it did, so **Edit › Undo** takes it back.
+
+### Things to ask it
+
+- *"Add a third-person player controller with a follow camera."*
+- *"Make the coins spin when you collect them, and add a score counter in the corner."*
+- *"The enemies walk through walls — find out why and fix it."*
+- *"Change the projectile the gun fires to a rocket that leaves a smoke trail."*
+- *"Generate a low-poly treasure chest and put it next to the player."*
+- *"Build a pipeline that generates, retopologizes, textures and rigs a set of props, and run it on these five
+  pictures."*
+- *"Look at my scene and tell me what's here."* — or switch to **Ask** mode to explore a project safely.
+
+### Memory
+
+It keeps notes and a brief for each project — what the game is, its conventions, decisions you've made — plus
+your preferences across all your projects, and uses them in every conversation. Open **Memory** to see, edit or
+delete any of it. Your past conversations are in **History**.
 
 ### Modes
 
@@ -224,8 +277,8 @@ thinking — quick answers stay quick, and harder work gets more care. You can a
 - **Right-click › Add to Zetta Agent** in the Project window or the Hierarchy, or select things and press
   **⇧⌘M** (**Ctrl+Shift+M** on Windows). Several selected items are all tagged at once.
 
-A tag shows as a chip and is sent as the item's address — the agent opens the file or object itself and works on
-it. Nothing in your project is uploaded.
+A tag shows as a chip and is sent as the item's address, not its contents — the agent opens the file or inspects
+the object itself when it gets to work on it.
 
 **Attach files** with 📎 or by dropping them in: pictures and PDFs go to the agent, code and text files are read
 in, and anything else (models, audio, fonts…) is copied into `Assets/Zetta3D/Attachments/` and tagged.

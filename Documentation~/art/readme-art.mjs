@@ -1,6 +1,7 @@
 /**
  * Generates the README artwork in Documentation~/images/ from the Zetta 3D brand tokens:
  *   banner-dark.svg, banner-light.svg      the header
+ *   social-preview.png                     1280×640 card for the GitHub repository settings (needs Chrome)
  *
  *   node "Documentation~/art/readme-art.mjs"
  *
@@ -8,7 +9,8 @@
  * License) are embedded so the SVGs look the same on GitHub as in the brand kit. Blue is a fill, a dot
  * or text — never a stroke.
  */
-import { readFileSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -134,4 +136,20 @@ function banner(theme) {
 
 writeFileSync(join(OUT, 'banner-dark.svg'), banner('dark'))
 writeFileSync(join(OUT, 'banner-light.svg'), banner('light'))
-console.log('Wrote Documentation~/images: banner-dark.svg, banner-light.svg')
+
+// Social preview: the dark banner, centred on a 1280×640 card.
+const social = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+  <rect width="1280" height="640" fill="${T.ink}"/>
+  <image href="data:image/svg+xml;base64,${Buffer.from(banner('dark')).toString('base64')}" x="0" y="110" width="1280" height="420"/>
+</svg>`
+const chrome = ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', 'google-chrome', 'chromium'].find((c) =>
+  c.startsWith('/') ? existsSync(c) : spawnSync('which', [c]).status === 0)
+if (chrome) {
+  const tmp = join(OUT, '.social.svg')
+  writeFileSync(tmp, social)
+  spawnSync(chrome, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--force-device-scale-factor=1',
+    `--screenshot=${join(OUT, 'social-preview.png')}`, '--window-size=1280,640', '--virtual-time-budget=2000', `file://${tmp}`],
+    { stdio: 'ignore', timeout: 60_000 })
+  rmSync(tmp, { force: true })
+}
+console.log(`Wrote Documentation~/images: banner-dark.svg, banner-light.svg${chrome ? ', social-preview.png' : ' (no Chrome: skipped social-preview.png)'}`)

@@ -8,7 +8,7 @@
   several), options to choose from with "Something else…" for your own words, or a text box. Press OK and it
   continues the same turn; Skip lets it go on with its best guess. Protocol v1.5.
 - Agent: @-mentions (Scene or Project picker with search), drag-and-drop tagging from the Project window and Hierarchy;
-  tags show as chips and are sent as addresses (the agent opens the file itself — project files are never uploaded),
+  tags show as chips and are sent as addresses, not contents (the agent opens the file itself when it works on it),
   **Add to Zetta Agent** in the Project and Hierarchy right-click menus and **⇧⌘M / Ctrl+Shift+M** tag everything
   selected at once (opening the Agent window if needed),
   any-file attachments (pictures, PDFs, inlined text/code, other files copied into the project), Game view capture.

@@ -47,11 +47,9 @@ the Console. It looks at the Scene and Game views to check what it built, and ma
 game needs with Zetta 3D. You stay in charge: every change can be undone, by default it asks before anything risky,
 and you can stop it at any moment. [More about the agent ↓](#the-zetta-agent)
 
-<!-- Screenshot: the whole Editor with the Agent docked and a generated model in the scene.
 <p align="center">
-  <img alt="The Unity Editor with the Zetta Agent docked beside the Scene view" src="Documentation~/images/editor.png" width="100%">
+  <img alt="The Zetta Agent in the middle of a task: it has inspected the player and read the shooting script, and shows a card asking which prefab the gun should fire, how fast, and anything else about the smoke trail" src="Documentation~/images/agent.png" width="460">
 </p>
--->
 
 ## Install
 
@@ -116,11 +114,9 @@ Every window lives under **Window › Zetta 3D**, and the header of each one lin
 
 **Window › Zetta 3D › 3D Studio** — every tool from the web Studio, in a docked window.
 
-<!-- Screenshot: 3D Studio on the Generate 3D tab, with a prompt or a picture filled in.
 <p align="center">
-  <img alt="3D Studio: generating a 3D model from a picture" src="Documentation~/images/studio.png" width="860">
+  <img alt="3D Studio on the Generate 3D tab: a prompt for a pirate treasure chest, the engine choice and the output settings" src="Documentation~/images/studio.png" width="860">
 </p>
--->
 
 | Tool | What it does |
 |---|---|
@@ -141,11 +137,9 @@ Finished models import into `Assets/Zetta3D/Models/<id>-<name>/` (you can change
 
 **Window › Zetta 3D › My Generations** — everything you've made on Zetta 3D, on the web or in Unity.
 
-<!-- Screenshot: My Generations with a grid of models, one of them marked "In project".
 <p align="center">
-  <img alt="My Generations: a grid of models, with the ones already in the project marked" src="Documentation~/images/library.png" width="860">
+  <img alt="My Generations: a grid of twelve models, with the pirate treasure chest marked In project" src="Documentation~/images/library.png" width="860">
 </p>
--->
 
 - **Import** a model with a progress bar, or **drag it** straight into the Scene view or the Hierarchy.
 - Models already in your project are marked **In project**, with **Show** and **Place** buttons.
@@ -159,11 +153,9 @@ Gaussian splats and worlds made on zetta3d.ai are listed too, but Unity can't us
 **Window › Zetta 3D › Pipelines** — chain the Studio's tools into a reusable recipe on a node canvas: the same
 pipelines as on [zetta3d.ai/pipelines](https://zetta3d.ai/pipelines).
 
-<!-- Screenshot: the Pipelines canvas with a recipe of five or six steps.
 <p align="center">
-  <img alt="The Pipelines node canvas: a picture seed, generate, retopology, texture and rig steps" src="Documentation~/images/pipelines.png" width="860">
+  <img alt="The Pipelines node canvas: picture seed, remove background, generate 3D, retopology, AI texturing and auto rig, with the Generate 3D step's settings open" src="Documentation~/images/pipelines.png" width="860">
 </p>
--->
 
 - Start from a **picture** or a **model**, then add steps: Remove background, AI edit, Draw views, Isolate parts
   (one branch per part), Generate 3D or Smart 3D, Retopology, Segmentation, AI texturing, Smart UV and Auto rig.
@@ -178,12 +170,6 @@ pipelines as on [zetta3d.ai/pipelines](https://zetta3d.ai/pipelines).
 **Window › Zetta 3D › Agent** — a game-development assistant with a full understanding of Unity, working directly
 in your open project. Tell it what you want in plain words, the way you'd brief a teammate, and it plans the work,
 does it in the Editor, and checks the result.
-
-<!-- Screenshot: the Agent in the middle of a task — a few steps done, and a card asking you to pick a prefab.
-<p align="center">
-  <img alt="The Zetta Agent working on a request and asking the user to pick a prefab" src="Documentation~/images/agent.png" width="560">
-</p>
--->
 
 ### How it works
 
@@ -266,11 +252,9 @@ thinking — quick answers stay quick, and harder work gets more care. You can a
 
 ### Point it at things
 
-<!-- Screenshot: the message box with the @ picker open on Project, and a couple of tagged chips.
 <p align="center">
-  <img alt="Tagging a script and a scene object for the agent with @" src="Documentation~/images/agent-mention.png" width="560">
+  <img alt="The agent's message box with Coin.cs and HUD tagged as chips, and the @ picker open on the project's scripts" src="Documentation~/images/agent-mention.png" width="460">
 </p>
--->
 
 - **Type `@`** to tag a scene object or a project asset: pick **Scene** or **Project**, then search.
 - **Drag** assets from the Project window, or objects from the Hierarchy, onto the chat.

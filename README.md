@@ -32,7 +32,7 @@
 - **chain the tools into pipelines** that run over many pictures or models at once;
 - **build your game with the Zetta Agent**, an assistant that reads your scene and scripts, writes C#, builds
   prefabs and materials, looks at the Scene view to check its work, and makes the art it needs — on your Zetta
-  account, or on [your own DeepSeek, OpenAI, Claude or Gemini key](#your-own-ai-key).
+  account, or on [your own Gemini, OpenAI, DeepSeek or Claude API key](#your-own-api-key).
 
 Everything you make is also in your library on zetta3d.ai, and everything you made there shows up in Unity.
 
@@ -259,9 +259,10 @@ each and leave the other on Auto.
 While it works, the agent shows which model and thinking level it is on (for example *Capable · Medium thinking*);
 hover it to see whether Auto or you picked them.
 
-### Your own AI key
+### Your own API key
 
-Run the agent on your own API key from **DeepSeek**, **OpenAI**, **Claude** or **Gemini**, on any plan.
+Run the agent on your own API key, on any plan. It works today with **Gemini**, **OpenAI**, **DeepSeek** and
+**Claude**.
 
 1. Open **Unity › Settings › Zetta 3D** (Windows: **Edit › Preferences › Zetta 3D**).
 2. Under **Zetta Agent — account**, set **Run the agent on** to **My own API keys**.
@@ -269,7 +270,7 @@ Run the agent on your own API key from **DeepSeek**, **OpenAI**, **Claude** or *
    provider's page if you don't have one yet.
 
 <p align="center">
-  <img alt="Preferences › Zetta 3D, the Zetta Agent account section: Run the agent on My own API keys, with a saved key for DeepSeek, OpenAI, Claude and Gemini, each with Check key, Replace and Remove" src="Documentation~/images/own-keys-settings.png" width="640">
+  <img alt="Preferences › Zetta 3D, the Zetta Agent account section: Run the agent on My own API keys, with a saved key for each provider, each with Check key, Replace and Remove" src="Documentation~/images/own-keys-settings.png" width="640">
 </p>
 
 Under the message box, the first menu then says what the agent runs on: **Zetta Account**, or one of the
@@ -326,7 +327,7 @@ Click **OK** and it continues where it left off. **Skip** lets it go on with its
 ## Settings
 
 **Unity › Settings › Zetta 3D** (Windows: **Edit › Preferences › Zetta 3D**): your account, what the agent runs
-on and [your own AI keys](#your-own-ai-key), the import folders and the preferred mesh format (GLB or FBX).
+on and [your own API keys](#your-own-api-key), the import folders and the preferred mesh format (GLB or FBX).
 
 Project settings live in `ProjectSettings/Zetta3DSettings.json`, including the project id the agent's memory is
 tied to. **Commit that file**, so everyone on your team shares one project memory.

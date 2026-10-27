@@ -3,7 +3,7 @@
 ## [0.6.0] - 2026-10-27
 
 ### Added
-- Agent: **run it on your own API key** — DeepSeek, OpenAI, Claude or Gemini. In Preferences › Zetta 3D, choose
+- Agent: **run it on your own API key** — Gemini, OpenAI, DeepSeek or Claude. In Preferences › Zetta 3D, choose
   "My own API keys" and paste a key for any provider (Check key tells you it works). Keys are kept in your system's
   key store (macOS Keychain, Windows Credential Manager, or the Linux keyring), never in Unity's preferences. The
   chat box then shows a provider menu (Zetta Account, then only providers with a key), that provider's models and

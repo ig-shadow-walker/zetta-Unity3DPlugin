@@ -37,6 +37,12 @@ namespace Zetta3D.Editor.Agent
         VisualElement _memoryPanel;
         PopupField<string> _tier;
         PopupField<string> _thinking;
+        /// <summary>On the user's own keys: whose key the agent runs on. Null on the Zetta account.</summary>
+        PopupField<string> _provider;
+        /// <summary>The provider, model and thinking menus — rebuilt when the account, a key or the catalog changes.</summary>
+        VisualElement _pickers;
+        Button _sceneChip;
+        Button _gameChip;
         readonly List<ToolImage> _images = new List<ToolImage>();
         ThinkingIndicator _working;
         /// <summary>Files attached from disk: PDFs, text (inlined) and project copies (tagged as assets).</summary>
@@ -51,7 +57,9 @@ namespace Zetta3D.Editor.Agent
         readonly List<string> _imageLabels = new List<string>();
         bool _dirty;
 
-        static readonly List<string> Tiers = new List<string> { "auto", "fast", "capable", "intelligent" };
+        // The account menu's first entry; never a provider key.
+        const string ZettaAccount = "zetta";
+        static readonly List<string> Tiers =new List<string> { "auto", "fast", "capable", "intelligent" };
         static readonly List<string> TierLabels = new List<string> { "Auto", "Fast", "Capable", "Intelligent" };
         static readonly List<string> Thinking = new List<string> { "auto", "off", "low", "medium", "high", "xhigh", "max" };
         static readonly List<string> ThinkingLabels = new List<string>
@@ -61,13 +69,31 @@ namespace Zetta3D.Editor.Agent
         {
             AgentRuntime.Changed += MarkDirty;
             EditorApplication.update += Tick;
+            AgentCatalog.Changed += PickersChanged;
+            ZettaKeychain.Changed += PickersChanged;
+            ZettaAuth.Changed += RefreshCatalog;
         }
 
         void OnDisable()
         {
             AgentRuntime.Changed -= MarkDirty;
             EditorApplication.update -= Tick;
+            AgentCatalog.Changed -= PickersChanged;
+            ZettaKeychain.Changed -= PickersChanged;
+            ZettaAuth.Changed -= RefreshCatalog;
         }
+
+        // Signing in, or coming back to the window, asks the server again: a list fetched before it offered
+        // own keys (or before sign-in) would otherwise hide the provider menus until the window is reopened.
+        static void RefreshCatalog() => _ = AgentCatalog.RefreshAsync();
+
+        void OnFocus()
+        {
+            if (AgentCatalog.Providers == null) RefreshCatalog();
+        }
+
+        // Posted, not run inline: a change can come from one of these menus' own callbacks, or off the main thread.
+        void PickersChanged() => MainThread.Post(RebuildPickers);
 
         void MarkDirty() => _dirty = true;
 
@@ -83,6 +109,8 @@ namespace Zetta3D.Editor.Agent
             var root = ZettaUI.Root(rootVisualElement);
             root.Add(ZettaUI.Header("Zetta Agent"));
             root.Add(ZettaUI.Gate(BuildChat));
+            // Which providers and models the user's own keys can run — the server's list, never a built-in one.
+            _ = AgentCatalog.RefreshAsync();
             // Escape stops the agent, whatever it is doing — the same as the Stop button.
             root.RegisterCallback<KeyDownEvent>(e =>
             {
@@ -223,33 +251,22 @@ namespace Zetta3D.Editor.Agent
 
             var bar = new VisualElement().Classes("z-composer-bar");
             var attach = new VisualElement().Classes("z-composer-group");
-            var scene = ZettaUI.Button("📷  Scene", AttachScene, "z-composer-chip");
-            scene.tooltip = "Attach a picture of the Scene view";
-            attach.Add(scene);
-            var game = ZettaUI.Button("🎮  Game", AttachGame, "z-composer-chip");
-            game.tooltip = "Attach what the game camera sees (the Game view)";
-            attach.Add(game);
+            _sceneChip = ZettaUI.Button("📷  Scene", AttachScene, "z-composer-chip");
+            _sceneChip.tooltip = "Attach a picture of the Scene view";
+            attach.Add(_sceneChip);
+            _gameChip = ZettaUI.Button("🎮  Game", AttachGame, "z-composer-chip");
+            _gameChip.tooltip = "Attach what the game camera sees (the Game view)";
+            attach.Add(_gameChip);
             var file = ZettaUI.Button("📎  File", AttachFile, "z-composer-chip");
             file.tooltip = "Attach any file — pictures, PDFs, code and text, models, audio… (or drag files onto the chat). Type @, or select items and press ⇧⌘M (Ctrl+Shift+M), to tag scene objects and project assets.";
             attach.Add(file);
             bar.Add(attach);
 
+            _pickers = new VisualElement().Classes("z-composer-group");
+            bar.Add(_pickers);
+            RebuildPickers();
+
             var options = new VisualElement().Classes("z-composer-group");
-            _tier = new PopupField<string>(Tiers, Math.Max(0, Tiers.IndexOf(ZettaPrefs.AgentTier)),
-                v => TierLabels[Tiers.IndexOf(v)], v => TierLabels[Tiers.IndexOf(v)]);
-            _tier.tooltip = "Model — Auto picks the model for each message.";
-            _tier.AddToClassList("z-composer-popup");
-            _tier.RegisterValueChangedCallback(e => ZettaPrefs.AgentTier = e.newValue);
-            options.Add(_tier);
-
-            // Its own Auto, independent of the model's: Auto + Auto lets the agent decide both for each message.
-            _thinking = new PopupField<string>(Thinking, Math.Max(0, Thinking.IndexOf(ZettaPrefs.AgentThinking)),
-                v => ThinkingLabels[Thinking.IndexOf(v)], v => ThinkingLabels[Thinking.IndexOf(v)]);
-            _thinking.tooltip = "How hard the model thinks — Auto decides for each message, from how hard the request is.";
-            _thinking.AddToClassList("z-composer-popup");
-            _thinking.RegisterValueChangedCallback(e => ZettaPrefs.AgentThinking = e.newValue);
-            options.Add(_thinking);
-
             _autonomy = new PopupField<string>(Autonomy, Math.Max(0, Autonomy.IndexOf(ZettaPrefs.AgentAutonomy)),
                 v => AutonomyLabels[Autonomy.IndexOf(v)], v => AutonomyLabels[Autonomy.IndexOf(v)]);
             _autonomy.AddToClassList("z-composer-popup");
@@ -266,13 +283,126 @@ namespace Zetta3D.Editor.Agent
             bar.Add(ZettaUI.Spacer());
             var hint = new Label("⇧↵ new line").Classes("z-composer-hint");
             bar.Add(hint);
-            // Three pickers fill a narrow window: the hint goes before Send would wrap onto a line of its own.
-            bar.RegisterCallback<GeometryChangedEvent>(e => hint.Visible(e.newRect.width >= 760));
+            // The pickers fill a narrow window: the hint goes before Send would wrap onto a line of its own.
+            bar.RegisterCallback<GeometryChangedEvent>(e => hint.Visible(e.newRect.width >= (_provider != null ? 900 : 760)));
             _send = ZettaUI.Button("Send", Submit, "z-composer-send");
             bar.Add(_send);
             box.Add(bar);
             return composer;
         }
+
+        /// <summary>
+        /// The menus under the message box. On the Zetta account: model (Auto, Fast, Capable, Intelligent) and thinking.
+        /// On the user's own keys: provider (only those with a saved key), that provider's models, and the thinking
+        /// levels the model has — each list from the server. With no key saved, a button to add one instead.
+        /// Whenever a key is saved, the first menu also offers "Zetta Account", to go back to the Zetta account.
+        /// </summary>
+        void RebuildPickers()
+        {
+            if (_pickers == null) return;
+            _pickers.Clear();
+            _provider = null;
+            _tier = null;
+            _thinking = null;
+            var vision = true;
+
+            var keyed = AgentCatalog.KeyedProviders;
+            if (AgentCatalog.OwnKeys && keyed.Count == 0)
+            {
+                var add = ZettaUI.Button("🔑  Add an API key", OpenSettings, "z-composer-chip");
+                add.tooltip = "The agent is set to run on your own API keys, and none is saved yet. Add one, or switch back to your Zetta account, in Preferences › Zetta 3D.";
+                _pickers.Add(add);
+                SetCaptureChips(true);
+                return;
+            }
+
+            // With a key saved, the first menu says what the agent runs on: the Zetta account, or a provider's key.
+            if (keyed.Count > 0)
+            {
+                var accountKeys = new List<string> { ZettaAccount };
+                accountKeys.AddRange(keyed.Select(p => p.Key));
+                string AccountLabel(string key) => key == ZettaAccount ? "Zetta Account" : keyed.First(p => p.Key == key).Label;
+                var current = AgentCatalog.OwnKeys ? AgentCatalog.ActiveProvider.Key : ZettaAccount;
+                _provider = new PopupField<string>(accountKeys, accountKeys.IndexOf(current), AccountLabel, AccountLabel);
+                _provider.tooltip = "What the agent runs on: your Zetta account and credits, or your own API key with a provider. Add or remove keys in Preferences › Zetta 3D.";
+                _provider.AddToClassList("z-composer-popup");
+                _provider.RegisterValueChangedCallback(e =>
+                {
+                    if (e.newValue == ZettaAccount) ZettaPrefs.AgentAccount = "zetta";
+                    else
+                    {
+                        ZettaPrefs.AgentAccount = "own";
+                        ZettaPrefs.AgentProvider = e.newValue;
+                    }
+                    // Preferences shows the same choice; it and these menus rebuild from the event.
+                    AgentCatalog.NotifyChanged();
+                });
+                _pickers.Add(_provider);
+            }
+
+            if (AgentCatalog.OwnKeys)
+            {
+                var active = AgentCatalog.ActiveProvider;
+                var model = AgentCatalog.ActiveModel;
+                var modelKeys = active.Models.Select(m => m.Key).ToList();
+                string ModelLabel(string key) => active.Models.First(m => m.Key == key).Label;
+                _tier = new PopupField<string>(modelKeys, Math.Max(0, modelKeys.IndexOf(model.Key)), ModelLabel, ModelLabel);
+                _tier.tooltip = $"{model.Label} — {model.Blurb} Used for every message: Auto never changes the model on your own key.";
+                _tier.AddToClassList("z-composer-popup");
+                _tier.RegisterValueChangedCallback(e =>
+                {
+                    ZettaPrefs.SetAgentModel(active.Key, e.newValue);
+                    MainThread.Post(RebuildPickers);
+                });
+                _pickers.Add(_tier);
+
+                // Auto, then only the levels this model has.
+                var levels = new List<string> { "auto" };
+                levels.AddRange(model.Thinking.Where(Thinking.Contains));
+                var shown = AgentCatalog.ThinkingFor(model, ZettaPrefs.AgentThinking);
+                _thinking = new PopupField<string>(levels, Math.Max(0, levels.IndexOf(shown)), ThinkingLabel, ThinkingLabel);
+                _thinking.tooltip = "How hard the model thinks — Auto decides for each message, and thinks harder on long jobs.";
+                _thinking.AddToClassList("z-composer-popup");
+                _thinking.RegisterValueChangedCallback(e => ZettaPrefs.AgentThinking = e.newValue);
+                _pickers.Add(_thinking);
+                vision = model.Vision;
+            }
+            else
+            {
+                _tier = new PopupField<string>(Tiers, Math.Max(0, Tiers.IndexOf(ZettaPrefs.AgentTier)),
+                    v => TierLabels[Tiers.IndexOf(v)], v => TierLabels[Tiers.IndexOf(v)]);
+                _tier.tooltip = "Model — Auto picks the model for each message.";
+                _tier.AddToClassList("z-composer-popup");
+                _tier.RegisterValueChangedCallback(e => ZettaPrefs.AgentTier = e.newValue);
+                _pickers.Add(_tier);
+
+                // Its own Auto, independent of the model's: Auto + Auto lets the agent decide both for each message.
+                _thinking = new PopupField<string>(Thinking, Math.Max(0, Thinking.IndexOf(ZettaPrefs.AgentThinking)), ThinkingLabel, ThinkingLabel);
+                _thinking.tooltip = "How hard the model thinks — Auto decides for each message, from how hard the request is.";
+                _thinking.AddToClassList("z-composer-popup");
+                _thinking.RegisterValueChangedCallback(e => ZettaPrefs.AgentThinking = e.newValue);
+                _pickers.Add(_thinking);
+            }
+            SetCaptureChips(vision);
+            _pickers.SetEnabled(!AgentRuntime.Busy);
+        }
+
+        static string ThinkingLabel(string level) => ThinkingLabels[Math.Max(0, Thinking.IndexOf(level))];
+
+        /// <summary>Scene and Game attach a picture: not offered to a model that can't see.</summary>
+        void SetCaptureChips(bool vision)
+        {
+            foreach (var chip in new[] { _sceneChip, _gameChip })
+            {
+                if (chip == null) continue;
+                chip.SetEnabled(vision);
+                chip.tooltip = vision
+                    ? chip == _sceneChip ? "Attach a picture of the Scene view" : "Attach what the game camera sees (the Game view)"
+                    : "This model can't see pictures. Pick one that can to attach a view.";
+            }
+        }
+
+        static void OpenSettings() => SettingsService.OpenUserPreferences("Preferences/Zetta 3D");
 
         void SyncAutonomy()
         {
@@ -308,6 +438,18 @@ namespace Zetta3D.Editor.Agent
             }
             var text = _input.value ?? "";
             if (string.IsNullOrWhiteSpace(text) && _images.Count == 0 && _files.Count == 0 && _mentions.Count == 0) return;
+            // A model on the user's own key may not take pictures or PDFs: say so, and keep the attachments.
+            var ownModel = AgentCatalog.OwnKeys ? AgentCatalog.ActiveModel : null;
+            if (ownModel != null && !ownModel.Vision && _images.Count > 0)
+            {
+                AgentRuntime.Notice($"{ownModel.Label} can't see pictures. Remove them, or pick a model that can.");
+                return;
+            }
+            if (ownModel != null && !ownModel.Documents && _files.Any(f => f.Kind == "document"))
+            {
+                AgentRuntime.Notice($"{ownModel.Label} can't read PDFs. Remove them, or pick a model that can.");
+                return;
+            }
             if (string.IsNullOrWhiteSpace(text)) text = _mentions.Count > 0 && _images.Count == 0 && _files.Count == 0
                 ? "Take a look at what I tagged."
                 : "Take a look at what I attached.";
@@ -693,6 +835,8 @@ namespace Zetta3D.Editor.Agent
             else _working.RemoveFromHierarchy();
             _phase.Visible(false);
             if (_send != null) _send.text = AgentRuntime.Busy ? "Stop" : "Send";
+            // A turn keeps its model to the end: the menus wait while it runs or waits on the Editor.
+            _pickers?.SetEnabled(!AgentRuntime.Busy);
 
             var signatureNow = state.Items.Count + "|" + (state.Items.Count > 0 ? Signature(state.Items[state.Items.Count - 1]) : "");
             if (_lastScroll != signatureNow)
@@ -827,7 +971,13 @@ namespace Zetta3D.Editor.Agent
                 case "event":
                     return new VisualElement().Classes("z-msg", "z-msg--event").Children(new Label(item.Text).Classes("z-muted"));
                 case "error":
-                    return new VisualElement().Classes("z-msg").Children(new Label(item.Text).Classes("z-error"));
+                {
+                    var box = new VisualElement().Classes("z-msg", "z-error-card").Children(new Label(item.Text).Classes("z-error"));
+                    // A key the provider refused, an empty balance, a model the key can't use: the fix is in settings.
+                    if (item.Detail is "provider_key_invalid" or "provider_quota" or "provider_model_unavailable" or "provider_key_missing")
+                        box.Add(ZettaUI.Button("Open settings", OpenSettings, "z-button--small"));
+                    return box;
+                }
                 default:
                     return new Label(item.Text).Classes("z-hint");
             }

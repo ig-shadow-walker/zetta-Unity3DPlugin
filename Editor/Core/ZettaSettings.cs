@@ -75,6 +75,28 @@ namespace Zetta3D.Editor
             get => EditorPrefs.GetString("Zetta3D.Agent.Mode", "agent");
             set => EditorPrefs.SetString("Zetta3D.Agent.Mode", value);
         }
+
+        /// <summary>
+        /// What the agent runs on: "zetta" (the Zetta account) or "own" (the user's own API keys). The keys
+        /// themselves are never here — see ZettaKeychain.
+        /// </summary>
+        public static string AgentAccount
+        {
+            get => EditorPrefs.GetString("Zetta3D.Agent.Account", "zetta");
+            set => EditorPrefs.SetString("Zetta3D.Agent.Account", value);
+        }
+
+        /// <summary>The provider picked in the chat box, on "own" keys.</summary>
+        public static string AgentProvider
+        {
+            get => EditorPrefs.GetString("Zetta3D.Agent.Provider", "");
+            set => EditorPrefs.SetString("Zetta3D.Agent.Provider", value);
+        }
+
+        /// <summary>The model last used with a provider, so switching back finds it again.</summary>
+        public static string AgentModelFor(string provider) => EditorPrefs.GetString("Zetta3D.Agent.Model." + provider, "");
+
+        public static void SetAgentModel(string provider, string model) => EditorPrefs.SetString("Zetta3D.Agent.Model." + provider, model);
     }
 
     /// <summary>

@@ -355,9 +355,10 @@ namespace Zetta3D.Editor
         /// POST and read a server-sent-event stream (`data: {json}\n\n` frames). Events are delivered
         /// on the caller's context as they arrive. Not EventSource: the API streams the body of a POST.
         /// </summary>
-        public static async Task StreamAsync(string path, object body, Action<JObject> onEvent, CancellationToken cancel)
+        public static async Task StreamAsync(string path, object body, Action<JObject> onEvent, CancellationToken cancel,
+            IDictionary<string, string> headers = null)
         {
-            using var request = Build(HttpMethod.Post, path, body, null, true);
+            using var request = Build(HttpMethod.Post, path, body, headers, true);
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
             HttpResponseMessage response;
             try

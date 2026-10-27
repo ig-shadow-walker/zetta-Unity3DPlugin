@@ -695,6 +695,11 @@
 .z-think-dot--on { opacity: 1; scale: 1.2 1.2; }
 .z-think-label { color: var(--z-text-2); font-size: 12px; -unity-font-style: bold; }
 .z-think-route { margin-left: 10px; }
+/* Preferences: one provider per row for the user's own API keys. */
+.z-key-row { padding: 8px 0 6px 0; border-top-width: 1px; border-top-color: var(--z-border); }
+.z-key-row .z-row { margin-bottom: 4px; }
+.z-error-card { flex-direction: row; align-items: center; flex-wrap: wrap; }
+.z-error-card .z-error { flex-shrink: 1; margin-right: 8px; }
 .z-step-dot--running {
     background-color: var(--z-signal-text);
     transition-property: opacity, scale;

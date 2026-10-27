@@ -1,7 +1,10 @@
 using System.Collections.Generic;
+using System.Linq;
+using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
+using Zetta3D.Editor.Agent;
 
 namespace Zetta3D.Editor.Studio
 {
@@ -13,7 +16,7 @@ namespace Zetta3D.Editor.Studio
             new SettingsProvider("Preferences/Zetta 3D", SettingsScope.User)
             {
                 label = "Zetta 3D",
-                keywords = new HashSet<string> { "Zetta", "3D", "account", "sign in", "API", "models folder", "images folder", "glb", "fbx" },
+                keywords = new HashSet<string> { "Zetta", "3D", "account", "sign in", "API", "API key", "OpenAI", "Claude", "Gemini", "DeepSeek", "models folder", "images folder", "glb", "fbx" },
                 activateHandler = (_, root) => Build(root),
             };
 
@@ -65,6 +68,8 @@ namespace Zetta3D.Editor.Studio
             RenderAccount();
             ZettaAuth.Changed += RenderAccount;
             host.RegisterCallback<DetachFromPanelEvent>(_ => ZettaAuth.Changed -= RenderAccount);
+
+            scroll.Add(AgentAccountCard(host));
 
             // ─── Project ───
             var settings = ZettaProjectSettings.Instance;
@@ -141,6 +146,132 @@ namespace Zetta3D.Editor.Studio
             scroll.Add(connection);
 
             scroll.Add(ZettaUI.Hint($"Zetta 3D for Unity {ZettaConfig.Version}").Classes("z-pad"));
+        }
+
+        // ─── Zetta Agent: Zetta account or the user's own API keys ───
+
+        /// <summary>
+        /// What the agent runs on. On "own keys", one row per provider: paste a key, check it, replace or remove
+        /// it. The chat box then lists the providers that have a key. Models are picked in the chat box, not here.
+        /// </summary>
+        static VisualElement AgentAccountCard(VisualElement host)
+        {
+            var card = ZettaUI.Card(ZettaUI.Title("Zetta Agent — account"));
+            var body = new VisualElement();
+            card.Add(body);
+
+            void Render()
+            {
+                body.Clear();
+                var providers = AgentCatalog.Providers;
+                if (providers == null)
+                {
+                    body.Add(ZettaUI.Hint("The agent runs on your Zetta account. Using your own API keys isn't available on this server yet."));
+                    return;
+                }
+
+                body.Add(ZettaUI.Hint("Run the agent on your Zetta account, or on your own API key from DeepSeek, OpenAI, Claude or Gemini."));
+                body.Add(ZettaUI.Dropdown("Run the agent on", new List<string> { "zetta", "own" },
+                    new List<string> { "My Zetta account", "My own API keys" }, ZettaPrefs.AgentAccount, value =>
+                    {
+                        ZettaPrefs.AgentAccount = value;
+                        AgentCatalog.NotifyChanged();
+                        Render();
+                    }));
+                if (ZettaPrefs.AgentAccount != "own") return;
+
+                foreach (var provider in providers) body.Add(KeyRow(provider));
+                body.Add(ZettaUI.Hint(
+                    $"Keys are kept in {ZettaKeychain.StoreName}. They are sent to Zetta 3D only to run your messages, and are never saved " +
+                    "on our servers. What you use is billed by the provider, not in Zetta credits; making 3D models and pictures still uses " +
+                    "Zetta credits. Pick the provider and model in the Agent window, under the message box."));
+            }
+
+            Render();
+            AgentCatalog.Changed += Render;
+            host.RegisterCallback<DetachFromPanelEvent>(_ => AgentCatalog.Changed -= Render);
+            _ = AgentCatalog.RefreshAsync();
+            return card;
+        }
+
+        /// <summary>One provider: its key saved (✓, Check, Replace, Remove) or a field to paste one.</summary>
+        static VisualElement KeyRow(AgentProviderInfo provider)
+        {
+            var row = new VisualElement().Classes("z-key-row");
+            var status = new Label().Classes("z-hint");
+
+            void Render(bool editing)
+            {
+                row.Clear();
+                var saved = ZettaKeychain.Has(provider.Key);
+                var title = new VisualElement().Classes("z-row");
+                title.Add(new Label(provider.Label).Classes("z-label"));
+                if (saved) title.Add(new Label("✓ Key saved").Classes("z-chip", "z-chip--success"));
+                row.Add(title);
+
+                if (saved && !editing)
+                {
+                    row.Add(ZettaUI.Row(
+                        ZettaUI.Button("Check key", () => _ = Check(), "z-button--small"),
+                        ZettaUI.Button("Replace", () => Render(true), "z-button--small"),
+                        ZettaUI.Button("Remove", () =>
+                        {
+                            ZettaKeychain.Delete(provider.Key);
+                            status.text = "";
+                            Render(false);
+                        }, "z-button--small", "z-button--danger")).Classes("z-row--wrap"));
+                    row.Add(status);
+                    return;
+                }
+
+                var field = ZettaUI.TextInput($"Paste your {provider.Label} API key", "", 512);
+                field.isPasswordField = true;
+                field.AddToClassList("z-grow");
+                var line = new VisualElement().Classes("z-row");
+                line.Add(field);
+                line.Add(ZettaUI.Button("Save", () =>
+                {
+                    var error = ZettaKeychain.Set(provider.Key, field.value);
+                    field.value = "";
+                    if (error != null)
+                    {
+                        status.text = error;
+                        status.EnableInClassList("z-error", true);
+                        return;
+                    }
+                    Render(false);
+                    _ = Check();
+                }, "z-button--small", "z-button--signal"));
+                if (saved) line.Add(ZettaUI.Button("Cancel", () => Render(false), "z-button--small"));
+                row.Add(line);
+                if (!string.IsNullOrEmpty(provider.KeyUrl))
+                    row.Add(ZettaUI.Button($"Get a {provider.Label} key ↗", () => Application.OpenURL(provider.KeyUrl), "z-button--ghost", "z-button--small"));
+                row.Add(status);
+            }
+
+            async System.Threading.Tasks.Task Check()
+            {
+                status.EnableInClassList("z-error", false);
+                status.EnableInClassList("z-success", false);
+                status.text = "Checking…";
+                var key = ZettaKeychain.Get(provider.Key);
+                try
+                {
+                    var answer = await ZettaHttp.PostAsync("/unityAgent/provider-key/check", new JObject { ["provider"] = provider.Key },
+                        new Dictionary<string, string> { ["X-Zetta-Provider-Key"] = key ?? "" }, 30) as JObject;
+                    var ok = answer?["ok"]?.Value<bool>() == true;
+                    status.text = ok ? "The key works." : answer?["message"]?.ToString() ?? "The key didn't work.";
+                    status.EnableInClassList(ok ? "z-success" : "z-error", true);
+                }
+                catch (ZettaApiException e)
+                {
+                    status.text = e.Message;
+                    status.EnableInClassList("z-error", true);
+                }
+            }
+
+            Render(false);
+            return row;
         }
 
         static VisualElement Labelled(string label, VisualElement field)

@@ -283,6 +283,14 @@ namespace Zetta3D.Editor.Agent
             };
             // Model and thinking are each Auto on their own: "auto" here lets the server decide the thinking.
             body["thinking"] = ZettaPrefs.AgentThinking;
+            // On the user's own key: the provider and model picked in the chat box (the key itself goes in a header).
+            var model = AgentCatalog.OwnKeys ? AgentCatalog.ActiveModel : null;
+            if (model != null)
+            {
+                body["provider"] = AgentCatalog.ActiveProvider.Key;
+                body["model"] = model.Key;
+                body["thinking"] = AgentCatalog.ThinkingFor(model, ZettaPrefs.AgentThinking);
+            }
             if (State.SessionId > 0) body["sessionId"] = State.SessionId;
             try
             {
@@ -298,6 +306,23 @@ namespace Zetta3D.Editor.Agent
 
         static async Task Stream(JObject body)
         {
+            // Own keys chosen: never fall back to the Zetta account without saying so.
+            var provider = body["provider"]?.ToString();
+            if (AgentCatalog.OwnKeys && provider == null)
+            {
+                State.Phase = "idle";
+                AddError("The agent is set to run on your own API keys, and none is saved. Add one in Preferences › Zetta 3D, or switch back to your Zetta account there.", "provider_key_missing");
+                return;
+            }
+            var key = provider != null ? ZettaKeychain.Get(provider) : null;
+            if (provider != null && string.IsNullOrEmpty(key))
+            {
+                State.Phase = "idle";
+                AddError($"No API key is saved for {AgentCatalog.Provider(provider)?.Label ?? provider}. Add it in Preferences › Zetta 3D.", "provider_key_missing");
+                return;
+            }
+            var headers = key != null ? new Dictionary<string, string> { ["X-Zetta-Provider-Key"] = key } : null;
+
             _activeThisDomain = true;
             State.Phase = body["toolResults"] != null ? "sending" : "streaming";
             // A new message is routed afresh: the last turn's model is not shown while this one's is decided.
@@ -314,7 +339,7 @@ namespace Zetta3D.Editor.Agent
             LockReload();
             try
             {
-                await ZettaHttp.StreamAsync(ChatPath, body, evt => OnEvent(evt, calls, awaiting), cancel);
+                await ZettaHttp.StreamAsync(ChatPath, body, evt => OnEvent(evt, calls, awaiting), cancel, headers);
             }
             catch (OperationCanceledException)
             {
@@ -443,7 +468,7 @@ namespace Zetta3D.Editor.Agent
                     foreach (var id in evt["awaiting"] as JArray ?? new JArray()) awaiting.Add(id.ToString());
                     break;
                 case "error":
-                    AddError(evt["message"]?.ToString() ?? "The agent could not finish.");
+                    AddError(evt["message"]?.ToString() ?? "The agent could not finish.", evt["code"]?.ToString());
                     break;
             }
             Notify();
@@ -841,10 +866,18 @@ namespace Zetta3D.Editor.Agent
             }
         }
 
-        static void AddError(string message)
+        /// <summary>An error in the conversation; `code` (a provider_* failure) lets the window offer Open settings.</summary>
+        static void AddError(string message, string code = null)
         {
             FinishOpenText();
-            State.Items.Add(new ChatItem { Kind = "error", Text = message });
+            State.Items.Add(new ChatItem { Kind = "error", Text = message, Detail = code });
+            Notify();
+        }
+
+        /// <summary>A line in the conversation that is not the agent's — the window telling the user something.</summary>
+        public static void Notice(string message)
+        {
+            State.Items.Add(new ChatItem { Kind = "notice", Text = message });
             Notify();
         }
 

@@ -1,14 +1,21 @@
 # Changelog
 
-## [Unreleased]
+## [0.6.0] - 2026-10-27
 
 ### Added
 - Agent: **run it on your own API key** — DeepSeek, OpenAI, Claude or Gemini. In Preferences › Zetta 3D, choose
   "My own API keys" and paste a key for any provider (Check key tells you it works). Keys are kept in your system's
   key store (macOS Keychain, Windows Credential Manager, or the Linux keyring), never in Unity's preferences. The
   chat box then shows a provider menu (Zetta Account, then only providers with a key), that provider's models and
-  the thinking levels each model has. Your pick runs every message; Auto thinking still adapts. Usage is billed by the provider, not in
-  Zetta credits. Protocol v1.7. Appears when the server offers it.
+  the thinking levels each model has. Your pick runs every message; Auto thinking still adapts. Usage is billed by
+  the provider, not in Zetta credits; making 3D models and pictures still uses Zetta credits. Protocol v1.7.
+- Agent: images and PDFs are blocked before sending when the chosen model can't read them, and Scene / Game are
+  off for models that can't see pictures. Key problems (invalid key, no credit, model unavailable) show in the chat
+  with **Open settings**.
+
+### Fixed
+- The Agent window asks the server for its model list again after you sign in, or when you come back to it, so
+  the menus appear without reopening the window.
 
 ## [0.5.0] - 2026-10-27
 

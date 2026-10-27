@@ -31,7 +31,8 @@
 - **bring them into your project** in one click — imported, set up and, if you like, placed in the open scene;
 - **chain the tools into pipelines** that run over many pictures or models at once;
 - **build your game with the Zetta Agent**, an assistant that reads your scene and scripts, writes C#, builds
-  prefabs and materials, looks at the Scene view to check its work, and makes the art it needs.
+  prefabs and materials, looks at the Scene view to check its work, and makes the art it needs — on your Zetta
+  account, or on [your own DeepSeek, OpenAI, Claude or Gemini key](#your-own-ai-key).
 
 Everything you make is also in your library on zetta3d.ai, and everything you made there shows up in Unity.
 
@@ -61,7 +62,7 @@ installed on your computer, and a [Zetta 3D](https://zetta3d.ai) account.
 3. Paste the URL and click **Add**:
 
    ```
-   https://github.com/ig-shadow-walker/zetta-Unity3DPlugin.git#v0.5.0
+   https://github.com/ig-shadow-walker/zetta-Unity3DPlugin.git#v0.6.0
    ```
 
 Unity downloads the package with everything it needs: glTFast (GLB import), the meshopt decoder (compressed
@@ -75,13 +76,13 @@ GLBs) and Newtonsoft JSON. When it finishes, the **3D Studio** window opens on i
 **Edit the manifest instead.** Add this line to `dependencies` in your project's `Packages/manifest.json`:
 
 ```json
-"com.zetta3d.unity": "https://github.com/ig-shadow-walker/zetta-Unity3DPlugin.git#v0.5.0"
+"com.zetta3d.unity": "https://github.com/ig-shadow-walker/zetta-Unity3DPlugin.git#v0.6.0"
 ```
 
-**Latest version, not a pinned one.** Leave out `#v0.5.0` to follow the newest code. Pinning a version tag is
+**Latest version, not a pinned one.** Leave out `#v0.6.0` to follow the newest code. Pinning a version tag is
 better for a team, so everyone gets the same build.
 
-**Update.** Change the tag (for example `#v0.5.0` → a newer release) in `Packages/manifest.json`, or add the
+**Update.** Change the tag (for example `#v0.6.0` → a newer release) in `Packages/manifest.json`, or add the
 package again from its Git URL with the new tag. The [changelog](CHANGELOG.md) lists what each version adds.
 
 **Remove.** Package Manager › **Zetta 3D** › **Remove**. Models you imported stay in your project.
@@ -255,6 +256,38 @@ each and leave the other on Auto.
 While it works, the agent shows which model and thinking level it is on (for example *Capable · Medium thinking*);
 hover it to see whether Auto or you picked them.
 
+### Your own AI key
+
+Run the agent on your own API key from **DeepSeek**, **OpenAI**, **Claude** or **Gemini**, on any plan.
+
+1. Open **Unity › Settings › Zetta 3D** (Windows: **Edit › Preferences › Zetta 3D**).
+2. Under **Zetta Agent — account**, set **Run the agent on** to **My own API keys**.
+3. Paste a key next to a provider and click **Save**. It is checked straight away; **Get a key** opens the
+   provider's page if you don't have one yet.
+
+<p align="center">
+  <img alt="Preferences › Zetta 3D, the Zetta Agent account section: Run the agent on My own API keys, with a saved key for DeepSeek, OpenAI, Claude and Gemini, each with Check key, Replace and Remove" src="Documentation~/images/own-keys-settings.png" width="640">
+</p>
+
+Under the message box, the first menu then says what the agent runs on: **Zetta Account**, or one of the
+providers you saved a key for. Pick a provider, then any of its models and a thinking level — only the levels that
+model has are offered, and **Auto** still decides the thinking for each message. The model you pick is used for
+every message; switch back to **Zetta Account** at any time.
+
+<p align="center">
+  <img alt="The Zetta Agent on the user's own OpenAI key: the menus under the message box read OpenAI, GPT-6.1 Sol and Medium thinking, after the agent added health bars to every enemy" src="Documentation~/images/agent-own-key.png" width="640">
+</p>
+
+- **Billing.** What the agent uses on your key is billed by that provider, not in Zetta credits. Making 3D models
+  and pictures still uses Zetta credits.
+- **Your key stays yours.** It is kept in your system's key store — macOS Keychain, Windows Credential Manager or
+  the Linux keyring — never in Unity's preferences or your project. It goes to Zetta 3D only to run your messages
+  and is never saved on our servers.
+- **Pictures and PDFs.** Some models can't read them: **📷 Scene** and **🎮 Game** turn off, and the agent tells you
+  before sending a file the model can't open.
+- **If the key stops working** — wrong, out of credit, or the model is unavailable — the chat says so and
+  **Open settings** takes you to the key.
+
 ### Point it at things
 
 <p align="center">
@@ -289,8 +322,8 @@ Click **OK** and it continues where it left off. **Skip** lets it go on with its
 
 ## Settings
 
-**Unity › Settings › Zetta 3D** (Windows: **Edit › Preferences › Zetta 3D**): your account, the import folders
-and the preferred mesh format (GLB or FBX).
+**Unity › Settings › Zetta 3D** (Windows: **Edit › Preferences › Zetta 3D**): your account, what the agent runs
+on and [your own AI keys](#your-own-ai-key), the import folders and the preferred mesh format (GLB or FBX).
 
 Project settings live in `ProjectSettings/Zetta3DSettings.json`, including the project id the agent's memory is
 tied to. **Commit that file**, so everyone on your team shares one project memory.

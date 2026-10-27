@@ -62,8 +62,10 @@ installed on your computer, and a [Zetta 3D](https://zetta3d.ai) account.
 3. Paste the URL and click **Add**:
 
    ```
-   https://github.com/ig-shadow-walker/zetta-Unity3DPlugin.git#v0.6.0
+   https://github.com/ig-shadow-walker/zetta-Unity3DPlugin.git
    ```
+
+   This link always gives you the latest stable release.
 
 Unity downloads the package with everything it needs: glTFast (GLB import), the meshopt decoder (compressed
 GLBs) and Newtonsoft JSON. When it finishes, the **3D Studio** window opens on its own.
@@ -76,14 +78,15 @@ GLBs) and Newtonsoft JSON. When it finishes, the **3D Studio** window opens on i
 **Edit the manifest instead.** Add this line to `dependencies` in your project's `Packages/manifest.json`:
 
 ```json
-"com.zetta3d.unity": "https://github.com/ig-shadow-walker/zetta-Unity3DPlugin.git#v0.6.0"
+"com.zetta3d.unity": "https://github.com/ig-shadow-walker/zetta-Unity3DPlugin.git"
 ```
 
-**Latest version, not a pinned one.** Leave out `#v0.6.0` to follow the newest code. Pinning a version tag is
-better for a team, so everyone gets the same build.
+**Pin a version.** Add a release tag to the URL, for example `…/zetta-Unity3DPlugin.git#v0.6.0`. Pinning is
+better for a team, so everyone gets the same build; change the tag to move to a newer release.
 
-**Update.** Change the tag (for example `#v0.6.0` → a newer release) in `Packages/manifest.json`, or add the
-package again from its Git URL with the new tag. The [changelog](CHANGELOG.md) lists what each version adds.
+**Update.** Unity keeps the version it installed until you ask for a newer one: add the package again from the
+same Git URL, or delete the `com.zetta3d.unity` entry from `Packages/packages-lock.json`. The
+[changelog](CHANGELOG.md) lists what each version adds.
 
 **Remove.** Package Manager › **Zetta 3D** › **Remove**. Models you imported stay in your project.
 

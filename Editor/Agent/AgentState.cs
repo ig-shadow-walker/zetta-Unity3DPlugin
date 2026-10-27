@@ -63,6 +63,17 @@ namespace Zetta3D.Editor.Agent
         public int TokensThisSession;
 
         /// <summary>
+        /// The model tier and thinking the server is running this turn on (its `route` event): "Capable", "low",
+        /// and why — Auto's reason, or "chosen by hand". Shown beside the working indicator; empty until it arrives.
+        /// </summary>
+        public string RouteLabel;
+        public string RouteThinking;
+        public string RouteReason;
+        public string RouteSource;
+        /// <summary>The thinking this turn's message asked for — "auto" or a level — to say who picked it.</summary>
+        public string RouteThinkingAsked;
+
+        /// <summary>
         /// The user pressed Stop: nothing resumes on its own — no tool results, compile reports or queued job
         /// events — until they send a new message. Survives domain reloads.
         /// </summary>

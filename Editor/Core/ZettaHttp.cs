@@ -55,11 +55,24 @@ namespace Zetta3D.Editor
         static string Url(string path) =>
             path.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? path : ZettaConfig.ApiBase + path;
 
+        /// <summary>
+        /// The Editor's version, read once on the main thread as the plugin loads — Unity's API is not
+        /// promised to answer from the background threads a request may be built on.
+        /// </summary>
+        static string _unityVersion = "";
+
+        [UnityEditor.InitializeOnLoadMethod]
+        static void ReadUnityVersion() => _unityVersion = UnityEngine.Application.unityVersion;
+
         static HttpRequestMessage Build(HttpMethod method, string path, object body, IDictionary<string, string> headers, bool auth)
         {
             var request = new HttpRequestMessage(method, Url(path));
             request.Headers.UserAgent.ParseAdd($"Zetta3D-Unity/{ZettaConfig.Version}");
             request.Headers.TryAddWithoutValidation("X-Zetta-Client", ZettaConfig.ClientName);
+            // Versions, so Account › Connections and our admin can say which plugin and Unity you use (2026-10-26).
+            request.Headers.TryAddWithoutValidation("X-Zetta-Client-Version", ZettaConfig.Version);
+            if (!string.IsNullOrEmpty(_unityVersion))
+                request.Headers.TryAddWithoutValidation("X-Zetta-Host-Version", _unityVersion);
             if (auth && !string.IsNullOrEmpty(ZettaPrefs.Token))
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ZettaPrefs.Token);
             if (headers != null)

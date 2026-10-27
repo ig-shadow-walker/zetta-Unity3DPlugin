@@ -11,6 +11,7 @@ namespace Zetta3D.Editor.Agent
     {
         readonly VisualElement[] _dots = new VisualElement[3];
         readonly Label _label;
+        readonly Label _route;
         IVisualElementScheduledItem _tick;
         int _frame;
 
@@ -29,6 +30,11 @@ namespace Zetta3D.Editor.Agent
             _label = new Label("Thinking");
             _label.AddToClassList("z-think-label");
             Add(_label);
+            _route = new Label();
+            _route.AddToClassList("z-chip");
+            _route.AddToClassList("z-think-route");
+            _route.style.display = DisplayStyle.None;
+            Add(_route);
 
             RegisterCallback<AttachToPanelEvent>(_ => _tick = schedule.Execute(Tick).Every(260));
             RegisterCallback<DetachFromPanelEvent>(_ =>
@@ -42,6 +48,14 @@ namespace Zetta3D.Editor.Agent
         {
             get => _label.text;
             set => _label.text = value;
+        }
+
+        /// <summary>The model tier and thinking this turn runs on — "Capable · Low thinking" — with why as the tooltip; hidden when empty.</summary>
+        public void SetRoute(string text, string why)
+        {
+            _route.text = text ?? "";
+            _route.tooltip = why ?? "";
+            _route.style.display = string.IsNullOrEmpty(text) ? DisplayStyle.None : DisplayStyle.Flex;
         }
 
         void Tick()

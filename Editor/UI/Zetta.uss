@@ -647,7 +647,8 @@
 .z-composer-group { flex-direction: row; align-items: center; flex-shrink: 0; margin-right: 6px; }
 .z-composer-chip { height: 26px; padding: 0 10px; margin: 2px; border-radius: 8px; border-width: 0; background-color: rgba(255, 255, 255, 0.05); color: var(--z-text-2); font-size: 11px; }
 .z-composer-chip:hover { background-color: var(--z-hover); color: var(--z-text); }
-.z-composer-popup { margin: 2px; min-width: 96px; }
+.z-composer-popup { margin: 2px; min-width: 72px; }
+.z-composer-popup .unity-base-popup-field__text { margin-right: 6px; }
 .z-composer-popup .unity-base-field__input { height: 26px; border-radius: 8px; border-width: 0; background-color: rgba(255, 255, 255, 0.05); color: var(--z-text); padding: 0 8px; }
 .z-composer-autonomy { min-width: 116px; }
 .z-composer-autonomy--full .unity-base-field__input { background-color: rgba(224, 173, 106, 0.16); color: var(--z-amber); }
@@ -693,6 +694,7 @@
 }
 .z-think-dot--on { opacity: 1; scale: 1.2 1.2; }
 .z-think-label { color: var(--z-text-2); font-size: 12px; -unity-font-style: bold; }
+.z-think-route { margin-left: 10px; }
 .z-step-dot--running {
     background-color: var(--z-signal-text);
     transition-property: opacity, scale;

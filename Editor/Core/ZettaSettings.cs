@@ -40,7 +40,7 @@ namespace Zetta3D.Editor
 
         public static string AgentThinking
         {
-            get => EditorPrefs.GetString("Zetta3D.Agent.Thinking", "medium");
+            get => EditorPrefs.GetString("Zetta3D.Agent.Thinking", "auto");
             set => EditorPrefs.SetString("Zetta3D.Agent.Thinking", value);
         }
 

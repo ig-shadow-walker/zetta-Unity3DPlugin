@@ -281,7 +281,8 @@ namespace Zetta3D.Editor.Agent
                 ["mode"] = ZettaPrefs.AgentMode,
                 ["approval"] = ZettaPrefs.AgentFullAutonomy ? "auto" : "confirm_destructive",
             };
-            if (ZettaPrefs.AgentTier != "auto") body["thinking"] = ZettaPrefs.AgentThinking;
+            // Model and thinking are each Auto on their own: "auto" here lets the server decide the thinking.
+            body["thinking"] = ZettaPrefs.AgentThinking;
             if (State.SessionId > 0) body["sessionId"] = State.SessionId;
             try
             {
@@ -299,6 +300,12 @@ namespace Zetta3D.Editor.Agent
         {
             _activeThisDomain = true;
             State.Phase = body["toolResults"] != null ? "sending" : "streaming";
+            // A new message is routed afresh: the last turn's model is not shown while this one's is decided.
+            if (body["toolResults"] == null)
+            {
+                State.RouteLabel = State.RouteThinking = State.RouteReason = State.RouteSource = null;
+                State.RouteThinkingAsked = body["thinking"]?.ToString();
+            }
             Notify();
             _stream = new CancellationTokenSource();
             var cancel = _stream.Token;
@@ -352,8 +359,13 @@ namespace Zetta3D.Editor.Agent
                     State.SessionId = evt["sessionId"]?.Value<long>() ?? State.SessionId;
                     break;
                 case "route":
-                    // The model and thinking the server chose: the input box's selector already says what is set,
-                    // so the conversation does not repeat it on every step.
+                    // The model and thinking the server chose — Auto's pick, or the hand-picked one after the plan's
+                    // ceiling. Shown beside the working indicator, not as a line in the conversation.
+                    var route = evt["route"] as JObject;
+                    State.RouteLabel = route?["label"]?.ToString();
+                    State.RouteThinking = route?["thinking"]?.ToString();
+                    State.RouteReason = route?["reason"]?.ToString();
+                    State.RouteSource = route?["source"]?.ToString();
                     break;
                 case "text":
                     AppendText(evt["text"]?.ToString() ?? "", evt["start"]?.Value<bool>() == true);

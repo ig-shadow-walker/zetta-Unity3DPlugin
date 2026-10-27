@@ -53,8 +53,9 @@ namespace Zetta3D.Editor.Agent
 
         static readonly List<string> Tiers = new List<string> { "auto", "fast", "capable", "intelligent" };
         static readonly List<string> TierLabels = new List<string> { "Auto", "Fast", "Capable", "Intelligent" };
-        static readonly List<string> Thinking = new List<string> { "off", "low", "medium", "high", "xhigh", "max" };
-        static readonly List<string> ThinkingLabels = new List<string> { "No thinking", "Low", "Medium", "High", "Extra high", "Max" };
+        static readonly List<string> Thinking = new List<string> { "auto", "off", "low", "medium", "high", "xhigh", "max" };
+        static readonly List<string> ThinkingLabels = new List<string>
+            { "Auto thinking", "No thinking", "Low thinking", "Medium thinking", "High thinking", "Extra high thinking", "Max thinking" };
 
         void OnEnable()
         {
@@ -236,21 +237,17 @@ namespace Zetta3D.Editor.Agent
             var options = new VisualElement().Classes("z-composer-group");
             _tier = new PopupField<string>(Tiers, Math.Max(0, Tiers.IndexOf(ZettaPrefs.AgentTier)),
                 v => TierLabels[Tiers.IndexOf(v)], v => TierLabels[Tiers.IndexOf(v)]);
-            _tier.tooltip = "Model — Auto picks the model and how hard it thinks for each message.";
+            _tier.tooltip = "Model — Auto picks the model for each message.";
             _tier.AddToClassList("z-composer-popup");
-            _tier.RegisterValueChangedCallback(e =>
-            {
-                ZettaPrefs.AgentTier = e.newValue;
-                _thinking.Visible(e.newValue != "auto");
-            });
+            _tier.RegisterValueChangedCallback(e => ZettaPrefs.AgentTier = e.newValue);
             options.Add(_tier);
 
+            // Its own Auto, independent of the model's: Auto + Auto lets the agent decide both for each message.
             _thinking = new PopupField<string>(Thinking, Math.Max(0, Thinking.IndexOf(ZettaPrefs.AgentThinking)),
                 v => ThinkingLabels[Thinking.IndexOf(v)], v => ThinkingLabels[Thinking.IndexOf(v)]);
-            _thinking.tooltip = "How hard the model may think. Adaptive (in settings) lets it think less when a turn is simple.";
+            _thinking.tooltip = "How hard the model thinks — Auto decides for each message, from how hard the request is.";
             _thinking.AddToClassList("z-composer-popup");
             _thinking.RegisterValueChangedCallback(e => ZettaPrefs.AgentThinking = e.newValue);
-            _thinking.Visible(ZettaPrefs.AgentTier != "auto");
             options.Add(_thinking);
 
             _autonomy = new PopupField<string>(Autonomy, Math.Max(0, Autonomy.IndexOf(ZettaPrefs.AgentAutonomy)),
@@ -267,7 +264,10 @@ namespace Zetta3D.Editor.Agent
             bar.Add(options);
 
             bar.Add(ZettaUI.Spacer());
-            bar.Add(new Label("⇧↵ new line").Classes("z-composer-hint"));
+            var hint = new Label("⇧↵ new line").Classes("z-composer-hint");
+            bar.Add(hint);
+            // Three pickers fill a narrow window: the hint goes before Send would wrap onto a line of its own.
+            bar.RegisterCallback<GeometryChangedEvent>(e => hint.Visible(e.newRect.width >= 760));
             _send = ZettaUI.Button("Send", Submit, "z-composer-send");
             bar.Add(_send);
             box.Add(bar);
@@ -687,6 +687,7 @@ namespace Zetta3D.Editor.Agent
             if (phase != "")
             {
                 _working.Text = phase;
+                _working.SetRoute(RouteText(state), RouteWhy(state));
                 if (_working.parent != _list || _list.IndexOf(_working) != _list.childCount - 1) _list.Add(_working);
             }
             else _working.RemoveFromHierarchy();
@@ -702,6 +703,30 @@ namespace Zetta3D.Editor.Agent
         }
 
         string _lastScroll;
+
+        /// <summary>"Capable · Low thinking", "Fast · No thinking" — what the server said this turn runs on.</summary>
+        static string RouteText(AgentState state)
+        {
+            if (string.IsNullOrEmpty(state.RouteLabel)) return null;
+            var index = Thinking.IndexOf(state.RouteThinking ?? "");
+            return index <= 0 ? state.RouteLabel : state.RouteLabel + " · " + ThinkingLabels[index];
+        }
+
+        /// <summary>The chip's tooltip: who picked the model and the thinking, and whether the plan lowered them.</summary>
+        static string RouteWhy(AgentState state)
+        {
+            var reason = state.RouteReason ?? "";
+            var capped = reason.Contains("capped by the plan");
+            reason = reason.Replace(" (capped by the plan)", "");
+            var autoModel = state.RouteSource != "manual";
+            var autoThinking = string.IsNullOrEmpty(state.RouteThinkingAsked) || state.RouteThinkingAsked == "auto";
+            var why = autoModel && reason != "" ? " for " + reason : "";
+            var text = autoModel && autoThinking ? "Auto picked the model and the thinking" + why + "."
+                : autoModel ? "Auto picked the model" + why + "; you picked the thinking."
+                : autoThinking ? "You picked the model; Auto picked the thinking."
+                : "You picked the model and the thinking.";
+            return capped ? text + " Lowered to what your plan includes." : text;
+        }
 
         VisualElement Welcome()
         {

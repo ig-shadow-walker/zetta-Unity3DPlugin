@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.0] - 2026-10-27
+
+### Added
+- Agent: a **thinking level menu** beside the model menu, always shown, each with its own Auto — pick the model and
+  let Auto choose the thinking, or the other way round. Protocol v1.6.
+- Agent: the working indicator shows the model and thinking level each turn runs on (e.g. *Capable · Low thinking*),
+  and the tooltip says whether Auto or you picked them. On Auto it can step up mid-task on long or failing jobs.
+
+### Changed
+- The thinking level defaults to Auto.
+- The "⇧↵ new line" hint hides in narrow windows so the Send button stays on the same line as the menus.
+- Requests tell the server which plugin and Unity version you use.
+
 ## [0.4.0] - 2026-10-25
 
 ### Added

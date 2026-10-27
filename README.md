@@ -61,7 +61,7 @@ installed on your computer, and a [Zetta 3D](https://zetta3d.ai) account.
 3. Paste the URL and click **Add**:
 
    ```
-   https://github.com/ig-shadow-walker/zetta-Unity3DPlugin.git#v0.4.0
+   https://github.com/ig-shadow-walker/zetta-Unity3DPlugin.git#v0.5.0
    ```
 
 Unity downloads the package with everything it needs: glTFast (GLB import), the meshopt decoder (compressed
@@ -75,13 +75,13 @@ GLBs) and Newtonsoft JSON. When it finishes, the **3D Studio** window opens on i
 **Edit the manifest instead.** Add this line to `dependencies` in your project's `Packages/manifest.json`:
 
 ```json
-"com.zetta3d.unity": "https://github.com/ig-shadow-walker/zetta-Unity3DPlugin.git#v0.4.0"
+"com.zetta3d.unity": "https://github.com/ig-shadow-walker/zetta-Unity3DPlugin.git#v0.5.0"
 ```
 
-**Latest version, not a pinned one.** Leave out `#v0.4.0` to follow the newest code. Pinning a version tag is
+**Latest version, not a pinned one.** Leave out `#v0.5.0` to follow the newest code. Pinning a version tag is
 better for a team, so everyone gets the same build.
 
-**Update.** Change the tag (for example `#v0.4.0` → a newer release) in `Packages/manifest.json`, or add the
+**Update.** Change the tag (for example `#v0.5.0` → a newer release) in `Packages/manifest.json`, or add the
 package again from its Git URL with the new tag. The [changelog](CHANGELOG.md) lists what each version adds.
 
 **Remove.** Package Manager › **Zetta 3D** › **Remove**. Models you imported stay in your project.
@@ -246,9 +246,14 @@ Choose how much it checks with you, under the message box.
 
 ### Model and thinking
 
-Also under the message box. On **Auto**, every message goes to the right model with the right amount of
-thinking — quick answers stay quick, and harder work gets more care. You can also pick **Fast**, **Capable** or
-**Intelligent** yourself, and then a thinking level from **No thinking** to **Max**.
+Two menus under the message box: the model and the thinking level, each with its own **Auto**. On Auto, every
+message goes to the right model with the right amount of thinking — quick answers stay quick, and harder work gets
+more care. When a job turns out longer than it looked, or keeps hitting errors, Auto steps up mid-task. You can also
+pick **Fast**, **Capable** or **Intelligent** yourself, a thinking level from **No thinking** to **Max**, or one of
+each and leave the other on Auto.
+
+While it works, the agent shows which model and thinking level it is on (for example *Capable · Medium thinking*);
+hover it to see whether Auto or you picked them.
 
 ### Point it at things
 

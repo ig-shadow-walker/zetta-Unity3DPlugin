@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.8.0] - 2026-10-29
+## [0.7.1] - 2026-10-29
 
 ### Changed
 - Pipelines: the canvas moves like the web's. Drag the empty canvas, or scroll with two fingers on a trackpad, to move

@@ -1,6 +1,6 @@
 {
   "name": "com.zetta3d.unity",
-  "version": "0.8.0",
+  "version": "0.7.1",
   "displayName": "Zetta 3D",
   "description": "Zetta 3D inside the Unity Editor: generate 3D models and images, retopologize, texture, rig and convert them, import them into your project, and build your game with the Zetta Unity Agent — an assistant that sees your scene and works in the Editor.",
   "unity": "2022.3",

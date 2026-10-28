@@ -99,7 +99,19 @@ namespace Zetta3D.Editor
             Current = state;
             User = user;
             if (state == State.SignedIn) LastError = null;
-            Changed?.Invoke();
+            // One listener at a time: an exception in one (a page failing to build) would otherwise stop the rest
+            // from hearing the sign-in, and vanish inside the fire-and-forget refresh that called this.
+            foreach (var listener in Changed?.GetInvocationList() ?? Array.Empty<Delegate>())
+            {
+                try
+                {
+                    ((Action)listener)();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
         }
 
         // ─── Browser handoff ────────────────────────────────────────────────────────

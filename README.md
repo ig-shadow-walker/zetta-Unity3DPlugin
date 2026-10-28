@@ -27,7 +27,7 @@
 **Zetta 3D for Unity** puts your [Zetta 3D](https://zetta3d.ai) account inside the Unity Editor. Use it to:
 
 - **make 3D models** from text, a picture or several views, and finish them: retopology, segmentation, UVs,
-  texturing, rigging and format conversion;
+  texturing and rigging;
 - **bring them into your project** in one click — imported, set up and, if you like, placed in the open scene;
 - **chain the tools into pipelines** that run over many pictures or models at once;
 - **build your game with the Zetta Agent**, an assistant that reads your scene and scripts, writes C#, builds
@@ -68,7 +68,7 @@ installed on your computer, and a [Zetta 3D](https://zetta3d.ai) account.
    This link always gives you the latest stable release.
 
 Unity downloads the package with everything it needs: glTFast (GLB import), the meshopt decoder (compressed
-GLBs) and Newtonsoft JSON. When it finishes, the **3D Studio** window opens on its own.
+GLBs) and Newtonsoft JSON. When it finishes, the **Zetta 3D** window opens on its own.
 
 <details>
 <summary><b>Other ways to install, update and remove</b></summary>
@@ -101,22 +101,25 @@ same Git URL, or delete the `com.zetta3d.unity` entry from `Packages/packages-lo
   Unity *and* Unity Hub.
 - **A warning that a package is experimental** — the meshopt decoder is marked experimental by Unity. It's
   expected, and safe to keep.
-- **The 3D Studio window didn't open** — open it from **Window › Zetta 3D › 3D Studio**.
+- **The Zetta 3D window didn't open** — open it from **Window › Zetta 3D › 3D Studio**.
 
 </details>
 
 ## Sign in
 
-In the **3D Studio** window, click **Sign in with your browser**, sign in on zetta3d.ai and click **Connect
+In the **Zetta 3D** window, click **Sign in with your browser**, sign in on zetta3d.ai and click **Connect
 Unity**. That's it — the Editor receives its own session and never sees your password. The session is kept on
 your computer, not in the project, so it never ends up in version control.
 
-Every window lives under **Window › Zetta 3D**, and the header of each one links to the others:
-**3D Studio · My Generations · Pipelines · Agent**.
+Everything is in one **Zetta 3D** window, with a tab for each part in its header:
+**3D Studio · My Generations · Pipelines · Agent**. Dock it wherever you like; the items under **Window › Zetta 3D**
+open it on that tab. Each tab keeps its place while you switch — a half-written message or an open pipeline is
+still there when you come back. While the agent works, dots beside the **Agent** tab show it from any other tab;
+they turn amber and hold still when it's waiting for you.
 
 ## 3D Studio
 
-**Window › Zetta 3D › 3D Studio** — every tool from the web Studio, in a docked window.
+The **3D Studio** tab — every tool from the web Studio, docked in the Editor.
 
 <p align="center">
   <img alt="3D Studio on the Generate 3D tab: a prompt for a pirate treasure chest, the engine choice and the output settings" src="Documentation~/images/studio.png" width="860">
@@ -131,7 +134,6 @@ Every window lives under **Window › Zetta 3D**, and the header of each one lin
 | **Smart UV** | Lay a model's UVs out again as a clean layout, keeping its textures, rig and animation |
 | **Texture** | Re-texture a model from a description or a reference picture, up to 8K |
 | **Auto Rig** | Rig humanoids, animals and other creatures — Standard, Mixamo, Unity Humanoid, UE5, VRM or ActorCore bone names; GLB or FBX |
-| **Convert** | Convert to FBX, glTF, OBJ, USDZ, STL or 3MF, with pivot, scale, axis and texture options |
 | **Image Studio** | Generate, edit and compose images, and save them as textures or sprites |
 
 Finished models import into `Assets/Zetta3D/Models/<id>-<name>/` (you can change the folder) and, with
@@ -139,7 +141,7 @@ Finished models import into `Assets/Zetta3D/Models/<id>-<name>/` (you can change
 
 ### My Generations
 
-**Window › Zetta 3D › My Generations** — everything you've made on Zetta 3D, on the web or in Unity.
+The **My Generations** tab — everything you've made on Zetta 3D, on the web or in Unity.
 
 <p align="center">
   <img alt="My Generations: a grid of twelve models, with the pirate treasure chest marked In project" src="Documentation~/images/library.png" width="860">
@@ -154,24 +156,29 @@ Gaussian splats and worlds made on zetta3d.ai are listed too, but Unity can't us
 
 ## 3D Pipelines
 
-**Window › Zetta 3D › Pipelines** — chain the Studio's tools into a reusable recipe on a node canvas: the same
+The **Pipelines** tab — chain the Studio's tools into a reusable recipe on a node canvas: the same
 pipelines as on [zetta3d.ai/pipelines](https://zetta3d.ai/pipelines).
 
 <p align="center">
   <img alt="The Pipelines node canvas: picture seed, remove background, generate 3D, retopology, AI texturing and auto rig, with the Generate 3D step's settings open" src="Documentation~/images/pipelines.png" width="860">
 </p>
 
-- Start from a **picture** or a **model**, then add steps: Remove background, AI edit, Draw views, Isolate parts
-  (one branch per part), Generate 3D or Smart 3D, Retopology, Segmentation, AI texturing, Smart UV and Auto rig.
-- The canvas checks every step as you build, saves on its own, and has undo and redo.
-- **Run** a pipeline on up to 20 pictures or models at once — **Manual** (it waits for you before each step) or
-  **Auto**.
+- Start from a **picture**, a **model**, or **pictures of each side** (a Multi-view seed: front, and back, left and
+  right as you have them), then add steps: Remove background, AI edit, Draw views, Isolate parts (one branch per
+  part), Generate 3D or Smart 3D — from one picture, or their **Multi-view** steps from pictures of each side —
+  Retopology, Segmentation, AI texturing (from a picture or a description) or **Multi-view - AI texturing** (from
+  pictures of each side — wire in a Multi-view seed or Draw views, or give them on each run), Smart UV and Auto rig.
+- The canvas checks every step as you build, saves on its own, and has undo and redo. Click a connection to select
+  it — **✕** or **Delete** removes it — and drag either end to another socket to move it, or off onto the canvas to
+  remove it. A connection that can't be made says why.
+- **Run** a pipeline on up to 20 pictures, models or sets of pictures at once — **Manual** (it waits for you before
+  each step) or **Auto**.
 - Runs keep going on the server even if Unity is closed. The **Runs** view shows every step's result, lets you
   review isolated parts and retry a failed step, and imports the finished models into your project.
 
 ## The Zetta Agent
 
-**Window › Zetta 3D › Agent** — a game-development assistant with a full understanding of Unity, working directly
+The **Agent** tab — a game-development assistant with a full understanding of Unity, working directly
 in your open project. Tell it what you want in plain words, the way you'd brief a teammate, and it plans the work,
 does it in the Editor, and checks the result.
 
@@ -319,6 +326,25 @@ When the agent needs something from you to carry on, it shows a card in the chat
 - **a text box** to describe it yourself.
 
 Click **OK** and it continues where it left off. **Skip** lets it go on with its best guess.
+
+### Undo what it changed
+
+When a message is done, a card under the reply lists what it changed: each script and asset it created, edited,
+moved or deleted, any folder it made, and its changes to the scene. Click a line to open its preview: what changed
+in the file, line by line (or all of it, for a new file), or the agent's steps in the scene — with **Open** to see
+the file in your code editor.
+
+- **Undo** on a line puts that one back — an edited file returns to its version from before the message, a new
+  one goes to the trash, a deleted one comes back, a moved one moves back.
+- **Keep** on a line says you're happy with it. Leaving a line alone keeps it too — Keep just marks it on the card,
+  and a kept line can still be undone later.
+- **Keep all** and **Undo all** do the same for everything in the message you haven't decided on yet. Once every
+  line is kept, **Undo all** still puts the whole message back.
+
+The copies it restores from are kept in your project's `Library` folder, never in your project or version control.
+The scene's changes can only be undone while they are the newest in Unity's undo history: if you've changed the
+scene since, undo that first with **Edit › Undo**. Each of the agent's scene changes is also in **Edit › Undo** on
+its own, named after what it did.
 
 ### Stop
 

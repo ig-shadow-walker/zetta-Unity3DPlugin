@@ -234,7 +234,7 @@ namespace Zetta3D.Editor.Pipelines.UI
                 buttons.Add(import);
                 buttons.Add(ZettaUI.PlaceInSceneToggle());
             }
-            buttons.Add(ZettaUI.Button("Show in Library", () => ZettaStudioWindow.WithStudio(w => w.ShowTab(ZettaStudioWindow.LibraryTab)), "z-button--small", "z-button--ghost"));
+            buttons.Add(ZettaUI.Button("Show in Library", () => ZettaWindow.Open(ZettaWindow.Library), "z-button--small", "z-button--ghost"));
             box.Add(buttons);
             box.Add(progress);
             box.Add(properties);

@@ -299,7 +299,7 @@ namespace Zetta3D.Editor.Pipelines
         public static string ModelLabel(string model) => ZettaCatalog.ModelLabel(model);
 
         /// <summary>The models each generate kind offers (GENERATE_TAB_MODELS / SMART_TAB_MODELS).</summary>
-        public static string[] ModelsFor(string kind) => kind == NodeKinds.GenerateSmart3D ? new[] { "np1", "np15" } : new[] { "n1", "n25" };
+        public static string[] ModelsFor(string kind) => NodeCatalog.IsSmartGenerate(kind) ? new[] { "np1", "np15" } : new[] { "n1", "n25" };
 
         internal static bool IsKnownModel(string model) => model is "n1" or "n25" or "np1" or "np15";
 

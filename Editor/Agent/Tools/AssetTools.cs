@@ -64,6 +64,7 @@ namespace Zetta3D.Editor.Agent
             var connect = Args.Bool(input, "connect", true);
             if (File.Exists(FileTools.Physical(path)) || AssetDatabase.LoadMainAssetAtPath(path) != null)
                 throw new ToolException($"{path} already exists. Choose a new name (e.g. {AssetDatabase.GenerateUniqueAssetPath(path)}), or open the prefab and edit it.");
+            AgentChanges.WillWrite(path);
             FileTools.EnsureFolder(Folder(path));
 
             bool success;
@@ -171,6 +172,7 @@ namespace Zetta3D.Editor.Agent
 
             if (existing == null)
             {
+                AgentChanges.WillWrite(path);
                 FileTools.EnsureFolder(Folder(path));
                 AssetDatabase.CreateAsset(material, path);
             }

@@ -1,5 +1,39 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Agent: **undo what it changed.** When a message is done, a card under the reply lists every script and asset it
+  created, edited, moved or deleted, the folders it made, and its changes to the scene — with **Keep** and **Undo**
+  on each line, and **Keep all** / **Undo all** for the rest. Changes are kept unless you undo them, and a kept change
+  can still be undone. Click a line to preview it: the file's changes line by line, a new file's contents, or the
+  agent's steps in the scene. Files are copied just before the agent first changes them (with their .meta, so a restored asset
+  keeps its references), into `Library/Zetta3D/AgentChanges`. Scene changes are only undone while they are the
+  newest in Unity's undo history, so nothing you did afterwards is taken back with them.
+- Pipelines: **multi-view.** A **Multi-view seed** starts a run from pictures of each side (front required; back,
+  left and right as you have them), and **Multi-view - Generate 3D** and **Multi-view - Smart 3D** make the model
+  from them (or from Draw views). Run on… takes a set of pictures per run. **Multi-view - AI texturing** textures a
+  model from pictures of each side: wired into its Views input from a Multi-view seed or Draw views (the same
+  pictures the model was made from), or given on each run. A pipeline saved with Draw views wired into Generate 3D
+  opens with its multi-view step in place.
+- Pipelines: connections can be selected and removed (✕ or Delete), and either end dragged to another socket to move
+  it — or onto empty canvas to remove it. A connection that can't be made says why.
+
+### Changed
+- **One Zetta 3D window.** 3D Studio, My Generations, Pipelines and the Agent are tabs in its header instead of
+  separate windows; each tab keeps its place while you switch. The Window › Zetta 3D items open it on that tab, and
+  a layout saved with the old windows opens the new one in their place. While the agent works, dots beside the
+  **Agent** tab show it from any other tab — amber and still when it is waiting for you.
+- Pipelines: Generate 3D and Smart 3D take one picture; pictures of each side go to their Multi-view steps, and wiring
+  them the wrong way names the right step.
+
+### Removed
+- The **Convert** tab in 3D Studio, and Send to › Convert in My Generations.
+
+### Fixed
+- Signing in updates every open Zetta tab straight away. A window whose tab was hidden behind another stopped
+  listening for sign-in changes and showed "signed out" until it was reopened.
+
 ## [0.6.0] - 2026-10-27
 
 ### Added

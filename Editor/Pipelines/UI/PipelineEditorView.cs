@@ -95,6 +95,16 @@ namespace Zetta3D.Editor.Pipelines.UI
             _stack.Changed += _ => Render();
             StudioContext.Shared.Changed += OnStudioChanged;
             RunFollower.RunsUpdated += OnRunsUpdated;
+            // Back on screen (its tab shown again, or the Pipelines page brought back): listening again.
+            RegisterCallback<AttachToPanelEvent>(_ =>
+            {
+                StudioContext.Shared.Changed -= OnStudioChanged;
+                StudioContext.Shared.Changed += OnStudioChanged;
+                RunFollower.RunsUpdated -= OnRunsUpdated;
+                RunFollower.RunsUpdated += OnRunsUpdated;
+                OverlayHost?.UnregisterCallback<KeyDownEvent>(OnKeyDown, TrickleDown.TrickleDown);
+                (OverlayHost ?? this).RegisterCallback<KeyDownEvent>(OnKeyDown, TrickleDown.TrickleDown);
+            });
             RegisterCallback<DetachFromPanelEvent>(_ =>
             {
                 StudioContext.Shared.Changed -= OnStudioChanged;
@@ -440,6 +450,8 @@ namespace Zetta3D.Editor.Pipelines.UI
             };
             _canvas.ConnectRequested += (s, sh, t, th) => Try(() => GraphEditing.Connect(_stack.Present, s, sh, t, th, Gates));
             _canvas.RemoveRequested += RemoveNodes;
+            _canvas.ReconnectRequested += (edge, s, sh, t, th) => Try(() => GraphEditing.Reconnect(_stack.Present, edge, s, sh, t, th, Gates));
+            _canvas.Refused += Toast;
             _canvas.MoveRequested += moved =>
             {
                 // One drag, one undo.
@@ -517,7 +529,7 @@ namespace Zetta3D.Editor.Pipelines.UI
                 PerPart = graph.Edges.Any(e => e.SourceHandle == "each") && _fanOut.Contains(nodeId),
                 Problems = _problems.Where(p => p.NodeId == nodeId).Select(p => p.Message).ToList(),
                 Warnings = GraphRules.Warnings(graph, nodeId),
-                PerRun = NodeSettings.SetOnEachRun(node),
+                PerRun = NodeSettings.PerRunIn(graph, node),
             };
         }
 

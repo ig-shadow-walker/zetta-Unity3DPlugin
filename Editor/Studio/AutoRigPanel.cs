@@ -22,7 +22,7 @@ namespace Zetta3D.Editor.Studio
             "A body none of these describe.",
         };
 
-        public override string Id => ZettaStudioWindow.RigTab;
+        public override string Id => StudioPage.RigTab;
         public override string Title => "Auto Rig";
         protected override string Intro => "Add a skeleton and skin weights so the model is ready to animate.";
         protected override string Code => "auto_rigging";

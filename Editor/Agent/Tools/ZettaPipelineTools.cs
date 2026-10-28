@@ -112,7 +112,7 @@ namespace Zetta3D.Editor.Agent
             }
 
             var seed = graph.Seed;
-            var sb = new StringBuilder($"Pipeline #{pipeline.Id} “{pipeline.Title}” — starts from a {(seed?.Kind == NodeKinds.SeedModel ? "model" : seed != null ? "picture" : "(no seed)")}" +
+            var sb = new StringBuilder($"Pipeline #{pipeline.Id} “{pipeline.Title}” — starts from {(seed?.Kind == NodeKinds.SeedModel ? "a model" : seed?.Kind == NodeKinds.SeedViews ? "pictures of each side" : seed != null ? "a picture" : "(no seed)")}" +
                                        $", {Fmt.Plural(graph.Nodes.Count(n => !NodeCatalog.IsSeed(n.Kind)), "step")}, edited {AgentPipelineHelpers.Ago(pipeline.UpdatedAt, DateTime.UtcNow)}.\n");
             AppendGraphReport(sb, graph);
             sb.AppendLine();

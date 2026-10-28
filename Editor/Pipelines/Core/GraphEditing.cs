@@ -104,6 +104,8 @@ namespace Zetta3D.Editor.Pipelines
                 {
                     case NodeKinds.Generate3D:
                     case NodeKinds.GenerateSmart3D:
+                    case NodeKinds.Generate3DMultiview:
+                    case NodeKinds.GenerateSmart3DMultiview:
                         if (pair.Key == "pbr")
                         {
                             web["pbrMaterials"] = value;
@@ -127,6 +129,7 @@ namespace Zetta3D.Editor.Pipelines
                         }
                         break;
                     case NodeKinds.Texture:
+                    case NodeKinds.TextureMultiview:
                         if (pair.Key == "quality" && value?.Type == JTokenType.String)
                         {
                             web["tier"] = value.ToString() switch { "detailed" => ToolSettings.RetextureHd, "extreme" or "8k" => ToolSettings.Retexture8K, _ => ToolSettings.Retexture };
@@ -283,10 +286,26 @@ namespace Zetta3D.Editor.Pipelines
             var without = graph.Clone();
             without.Edges.RemoveAll(e => e.Target == target && e.TargetHandle == targetHandle);
             if (!GraphRules.CanConnect(without, source, sourceHandle, target, targetHandle))
-                throw new InvalidOperationException("Those two steps cannot be connected that way.");
+                throw new InvalidOperationException(GraphRules.ConnectionProblem(without, source, sourceHandle, target, targetHandle)
+                                                    ?? "Those two steps cannot be connected that way.");
             without.Edges.Add(new PipelineEdge { Id = NewId("e"), Source = source, SourceHandle = sourceHandle, Target = target, TargetHandle = targetHandle });
             RebuildRequest(without, target, entitlements);
             return without;
+        }
+
+        /// <summary>
+        /// Moves a connection: either end dragged to another socket. The moved one replaces whatever was in its new input;
+        /// refused — with the reason — where that socket cannot take it, the graph unchanged.
+        /// </summary>
+        public static PipelineGraph Reconnect(PipelineGraph graph, string edgeId, string source, string sourceHandle, string target, string targetHandle,
+            ThreeDEntitlements entitlements = null)
+        {
+            var old = graph.Edge(edgeId);
+            var without = graph.Clone();
+            without.Edges.RemoveAll(e => e.Id == edgeId);
+            var next = Connect(without, source, sourceHandle, target, targetHandle, entitlements);
+            if (old != null) RebuildRequest(next, old.Target, entitlements);
+            return next;
         }
 
         /// <summary>Removes one connection.</summary>
@@ -309,7 +328,7 @@ namespace Zetta3D.Editor.Pipelines
 
         static void RebuildIncomingDependents(PipelineGraph graph, ThreeDEntitlements entitlements)
         {
-            foreach (var node in graph.Nodes.Where(n => n.Kind == NodeKinds.Generate3D || n.Kind == NodeKinds.GenerateSmart3D))
+            foreach (var node in graph.Nodes.Where(n => NodeCatalog.IsGenerate(n.Kind)))
                 RebuildRequest(graph, node.Id, entitlements);
         }
 
@@ -458,7 +477,8 @@ namespace Zetta3D.Editor.Pipelines
                 graph.Edges.Add(new PipelineEdge { Id = $"e{i}", Source = source, SourceHandle = handle, Target = nodeId, TargetHandle = "in" });
                 result.StepNodeIds.Add(nodeId);
             }
-            result.Graph = RequestBuilder.WithRequests(graph, entitlements);
+            // Draw views into Generate 3D becomes Multi-view - Generate 3D, as the server would rename it.
+            result.Graph = RequestBuilder.WithRequests(NodeCatalog.WithMultiViewSteps(graph), entitlements);
             return result;
         }
     }

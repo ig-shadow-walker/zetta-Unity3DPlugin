@@ -129,6 +129,9 @@ namespace Zetta3D.Editor.Agent
         {
             if (!(seeds is JArray list) || list.Count == 0) throw new ToolException("'seeds' is required: 1–20 of { imageId } | { generationId } | { assetPath }.");
             if (list.Count > MaxSeeds) throw new ToolException($"At most {MaxSeeds} seeds per call ({list.Count} given) — split them over several run_pipeline calls.");
+            // Pictures of each side are given per run in the Pipelines tab — one set per run, front required.
+            if (seedKind == NodeKinds.SeedViews)
+                throw new ToolException("This pipeline starts from pictures of each side (a Multi-view seed). Those are given per run in the Pipelines tab — ask the user to press New run there and add each set; run_pipeline cannot give them.");
             var wants = seedKind == NodeKinds.SeedModel ? "model" : seedKind == NodeKinds.SeedPicture ? "picture" : null;
             var result = new List<PipelineSeedSpec>();
             for (var i = 0; i < list.Count; i++)
@@ -250,7 +253,9 @@ namespace Zetta3D.Editor.Agent
                 var node = applied.Node(p.NodeId);
                 var what = node?.Kind == NodeKinds.Texture
                     ? $"inputs[\"{p.NodeId}\"].prompt (a texture description) or inputs[\"{p.NodeId}\"].imageId (a reference picture)"
-                    : $"inputs[\"{p.NodeId}\"].prompt (how to change the picture)";
+                    : node?.Kind == NodeKinds.TextureMultiview
+                        ? "its pictures of each side — those are given in the Pipelines tab (the user opens the run there), or wire a Multi-view seed or Draw views into its views input"
+                        : $"inputs[\"{p.NodeId}\"].prompt (how to change the picture)";
                 return $"{p.NodeId} ({node?.DisplayName ?? "step"}): give {what}";
             }).ToList();
         }
@@ -388,6 +393,8 @@ namespace Zetta3D.Editor.Agent
             {
                 case NodeKinds.Generate3D:
                 case NodeKinds.GenerateSmart3D:
+                case NodeKinds.Generate3DMultiview:
+                case NodeKinds.GenerateSmart3DMultiview:
                     Add("model", s["model"]);
                     Add("quality", s["quality"]);
                     Add("output", s["output"]);
@@ -402,9 +409,10 @@ namespace Zetta3D.Editor.Agent
                         Add(pair.Key, pair.Value);
                     break;
                 case NodeKinds.Texture:
+                case NodeKinds.TextureMultiview:
                     foreach (var pair in s)
                     {
-                        if (pair.Key == "prompt" || pair.Key == "reference") continue; // given per run
+                        if (pair.Key == "prompt" || pair.Key == "reference" || pair.Key == "referenceViews") continue; // given per run
                         Add(pair.Key, pair.Value);
                     }
                     break;
@@ -509,7 +517,7 @@ namespace Zetta3D.Editor.Agent
         {
             var sb = new StringBuilder();
             var seedNode = recipe.Seed;
-            sb.AppendLine($"Pipeline #{pipelineId} “{title}” — starts from a {(seedNode?.Kind == NodeKinds.SeedModel ? "model" : "picture")}");
+            sb.AppendLine($"Pipeline #{pipelineId} “{title}” — starts from {(seedNode?.Kind == NodeKinds.SeedModel ? "a model" : seedNode?.Kind == NodeKinds.SeedViews ? "pictures of each side" : "a picture")}");
             var order = GraphRules.TopologicalOrder(recipe) ?? recipe.Nodes.Select(n => n.Id).ToList();
             var perPart = GraphRules.FanOutNodes(recipe);
             sb.AppendLine("Steps:");

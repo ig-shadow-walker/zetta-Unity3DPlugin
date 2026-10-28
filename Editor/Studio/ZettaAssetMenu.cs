@@ -30,7 +30,7 @@ namespace Zetta3D.Editor.Studio
                 await StudioAssets.UploadModelAsync(path, p => Notify(StudioAssets.UploadingText(p, $"Uploading {name}")));
                 Notify($"{name} is in your library.");
                 if (EditorUtility.DisplayDialog("Zetta 3D", $"{name} was added to your Zetta 3D library. Open My Generations?", "Open", "Close"))
-                    ZettaStudioWindow.WithStudio(w => w.ShowTab(ZettaStudioWindow.LibraryTab));
+                    ZettaWindow.Open(ZettaWindow.Library);
             }
             catch (ZettaApiException e)
             {
@@ -64,7 +64,7 @@ namespace Zetta3D.Editor.Studio
                 type = "image/png";
             }
             var fileName = Path.GetFileNameWithoutExtension(path) + StudioAssets.ExtensionFor(type);
-            ZettaStudioWindow.WithStudio(w => w.UseImageFor3D(bytes, type, fileName));
+            StudioPage.WithStudio(w => w.UseImageFor3D(bytes, type, fileName));
         }
 
         static void Notify(string message)

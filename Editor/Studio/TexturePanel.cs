@@ -15,7 +15,7 @@ namespace Zetta3D.Editor.Studio
         static readonly string[] TierLabels = { "Standard", "Detailed", "8K" };
         static readonly string[] TierResolutions = { "2K", "4K", "8K" };
 
-        public override string Id => ZettaStudioWindow.TextureTab;
+        public override string Id => StudioPage.TextureTab;
         public override string Title => "Texture";
         protected override string Intro => "Paint a new texture onto a model from a picture, or from a description of the surface.";
         protected override string Code => _tier;

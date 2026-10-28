@@ -117,6 +117,8 @@ namespace Zetta3D.Editor.Agent
                             Undo.SetCurrentGroupName(label);
                             Undo.CollapseUndoOperations(group);
                             Undo.IncrementCurrentGroup();
+                            // What this step put on Unity's undo stack, so the turn can be undone from the top.
+                            AgentChanges.SceneStepDone(label);
                         }
                     }
                 }

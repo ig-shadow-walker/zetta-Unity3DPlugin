@@ -156,7 +156,7 @@ namespace Zetta3D.Editor.Pipelines.UI
                 _ = ZettaUI.Run(delete, _error, async () =>
                 {
                     await PipelinesApi.DeleteAsync(id);
-                    if (PipelinesWindow.RememberedPipeline == id) PipelinesWindow.RememberedPipeline = null;
+                    if (PipelinesPage.RememberedPipeline == id) PipelinesPage.RememberedPipeline = null;
                     await LoadAsync();
                 });
             };

@@ -12,7 +12,7 @@ namespace Zetta3D.Editor.Studio
         const int MaxTriangles = 20_000;
         const int MaxQuads = 10_000;
 
-        public override string Id => ZettaStudioWindow.RetopologyTab;
+        public override string Id => StudioPage.RetopologyTab;
         public override string Title => "Retopology";
         protected override string Intro => "Rebuild the mesh with clean, even topology — lighter for games, easier to rig and UV.";
         protected override string Code => "smart_topology";

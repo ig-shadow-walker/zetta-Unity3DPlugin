@@ -61,6 +61,7 @@ namespace Zetta3D.Editor.Pipelines
             {
                 case NodeKinds.SeedPicture:
                 case NodeKinds.SeedModel:
+                case NodeKinds.SeedViews:
                 case NodeKinds.RemoveBackground:
                     // A seed is chosen for each run, never kept in the pipeline.
                     return new JObject();
@@ -97,6 +98,10 @@ namespace Zetta3D.Editor.Pipelines
                 case NodeKinds.Generate3D:
                 case NodeKinds.GenerateSmart3D:
                     return GenerateRequest(settings, context).request;
+                // Pictures of each side, always — built as the Studio's Multi-View to 3D builds them.
+                case NodeKinds.Generate3DMultiview:
+                case NodeKinds.GenerateSmart3DMultiview:
+                    return GenerateRequest(settings, AsViews(context)).request;
                 case NodeKinds.GenerateSplat:
                     return ToolSettings.SplatRequest(settings);
                 case NodeKinds.Retopology:
@@ -104,6 +109,14 @@ namespace Zetta3D.Editor.Pipelines
                 case NodeKinds.Segmentation:
                 case NodeKinds.SmartSegmentation:
                     return ToolSettings.SegmentRequest(settings);
+                // Pictures of each side in place of a description or one picture; views wired in win.
+                case NodeKinds.TextureMultiview:
+                {
+                    var multi = ToolSettings.TextureRequest(settings, null);
+                    multi["referenceViews"] = NodeSettings.ViewsRequest(settings["referenceViews"] as JObject);
+                    multi["removeReferenceBackground"] = !(settings["removeBg"]?.Type == JTokenType.Boolean && !settings["removeBg"].Value<bool>());
+                    return multi;
+                }
                 case NodeKinds.Texture:
                 {
                     var reference = settings["reference"] as JObject;
@@ -166,6 +179,9 @@ namespace Zetta3D.Editor.Pipelines
             return (body, problems);
         }
 
+        /// <summary>A multi-view step's context: views always arrive, whatever is wired in yet.</summary>
+        static NodeContext AsViews(NodeContext context) => new NodeContext(PortTypes.Views, context.Entitlements);
+
         /// <summary>What the Studio's form would refuse — shown on the node, and no run starts on it (nodeProblems).</summary>
         public static List<string> NodeProblems(string kind, JObject settings, NodeContext context)
         {
@@ -176,8 +192,8 @@ namespace Zetta3D.Editor.Pipelines
                 var problem = ToolSettings.RetopologyRangeProblem(settings);
                 return problem == null ? new List<string>() : new List<string> { problem };
             }
-            if (kind != NodeKinds.Generate3D && kind != NodeKinds.GenerateSmart3D) return new List<string>();
-            return GenerateRequest(settings, context).problems;
+            if (!NodeCatalog.IsGenerate(kind)) return new List<string>();
+            return GenerateRequest(settings, NodeCatalog.IsMultiViewGenerate(kind) ? AsViews(context) : context).problems;
         }
 
         /// <summary>One run of this node, in credits — the price the Studio panel quotes. Null while prices are unknown (priceFor).</summary>
@@ -188,6 +204,8 @@ namespace Zetta3D.Editor.Pipelines
             {
                 case NodeKinds.Generate3D:
                 case NodeKinds.GenerateSmart3D:
+                case NodeKinds.Generate3DMultiview:
+                case NodeKinds.GenerateSmart3DMultiview:
                 {
                     var request = RequestFor(node.Kind, settings, context);
                     if (!(request["spec"]?["generation"] is JObject generation) || prices == null) return null;
@@ -203,6 +221,7 @@ namespace Zetta3D.Editor.Pipelines
                 case NodeKinds.SmartSegmentation:
                     return ToolSettings.SegmentPrice(prices, settings);
                 case NodeKinds.Texture:
+                case NodeKinds.TextureMultiview:
                     return ToolSettings.TexturePrice(prices, settings);
                 case NodeKinds.SmartUv:
                     return ToolSettings.SmartUvPrice(prices);
@@ -241,7 +260,8 @@ namespace Zetta3D.Editor.Pipelines
         /// </summary>
         public static NormalizeResult Normalize(PipelineGraph saved)
         {
-            var graph = saved.Clone();
+            // A generation fed views opens as its multi-view step (the server renames it the same way when it reads it).
+            var graph = NodeCatalog.WithMultiViewSteps(saved).Clone();
             foreach (var node in graph.Nodes)
             {
                 if (NodeCatalog.NotAvailableInUnity(node.Kind)) continue;
@@ -289,8 +309,17 @@ namespace Zetta3D.Editor.Pipelines
         {
             if (!NodeSettings.SetOnEachRun(node)) return;
             node.Settings = node.Settings != null ? (JObject)node.Settings.DeepClone() : new JObject();
+            if (node.Kind == NodeKinds.TextureMultiview)
+            {
+                node.Settings["referenceViews"] = new JObject();
+                return;
+            }
             node.Settings["prompt"] = "";
-            if (node.Kind == NodeKinds.Texture) node.Settings["reference"] = null;
+            if (node.Kind == NodeKinds.Texture)
+            {
+                node.Settings["reference"] = null;
+                node.Settings["referenceViews"] = new JObject();
+            }
         }
 
         /// <summary>
@@ -303,7 +332,7 @@ namespace Zetta3D.Editor.Pipelines
             var settings = NodeSettings.WithDefaults(node.Kind, node.Settings);
             if (settingsPatch != null)
             {
-                if (node.Kind == NodeKinds.Generate3D || node.Kind == NodeKinds.GenerateSmart3D) settings = GenerateForm.ApplyPatch(settings, settingsPatch);
+                if (NodeCatalog.IsGenerate(node.Kind)) settings = GenerateForm.ApplyPatch(settings, settingsPatch);
                 else
                     foreach (var pair in settingsPatch)
                         settings[pair.Key] = pair.Value?.DeepClone();

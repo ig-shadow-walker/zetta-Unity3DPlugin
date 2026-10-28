@@ -34,7 +34,7 @@ namespace Zetta3D.Editor.Studio
             "retexture", "autoRigging", "convertFormat", "upload",
         };
 
-        public override string Id => ZettaStudioWindow.LibraryTab;
+        public override string Id => StudioPage.LibraryTab;
         public override string Title => "My Generations";
 
         ZettaUI.Segmented _mode;
@@ -442,19 +442,18 @@ namespace Zetta3D.Editor.Studio
                 var processable = ZettaCatalog.ProcessableFeatures.Contains(row.Feature ?? "");
                 foreach (var (tab, label) in new[]
                          {
-                             (ZettaStudioWindow.SegmentTab, "Segment"),
-                             (ZettaStudioWindow.RetopologyTab, "Retopology"),
-                             (ZettaStudioWindow.SmartUvTab, "Smart UV"),
-                             (ZettaStudioWindow.TextureTab, "Texture"),
-                             (ZettaStudioWindow.RigTab, "Auto Rig"),
-                             (ZettaStudioWindow.ConvertTab, "Convert"),
+                             (StudioPage.SegmentTab, "Segment"),
+                             (StudioPage.RetopologyTab, "Retopology"),
+                             (StudioPage.SmartUvTab, "Smart UV"),
+                             (StudioPage.TextureTab, "Texture"),
+                             (StudioPage.RigTab, "Auto Rig"),
                          })
                 {
                     // The tool that made a row does not run on it again.
-                    var made = (tab == ZettaStudioWindow.RetopologyTab && row.Feature == "retopology")
-                               || (tab == ZettaStudioWindow.SmartUvTab && row.Feature == "uvUnwrap");
+                    var made = (tab == StudioPage.RetopologyTab && row.Feature == "retopology")
+                               || (tab == StudioPage.SmartUvTab && row.Feature == "uvUnwrap");
                     var content = new GUIContent("Send to/" + label);
-                    if ((processable && !made) || tab == ZettaStudioWindow.ConvertTab)
+                    if (processable && !made)
                         menu.AddItem(content, false, () => Ctx.Window?.UseAsSource(row, tab));
                     else menu.AddDisabledItem(content);
                 }
@@ -943,7 +942,7 @@ namespace Zetta3D.Editor.Studio
         static readonly string[] Features = { "", "genImg", "editImg", "composeImg" };
         static readonly string[] FeatureLabels = { "All images", "Generated", "Edited", "Composed" };
 
-        readonly Func<ZettaStudioWindow> _window;
+        readonly Func<StudioPage> _window;
         readonly VisualElement _grid;
         readonly Label _error;
         readonly Label _summary;
@@ -954,7 +953,7 @@ namespace Zetta3D.Editor.Studio
         int _request;
         string _textureType = "default";
 
-        public ImageLibraryView(Func<ZettaStudioWindow> window)
+        public ImageLibraryView(Func<StudioPage> window)
         {
             _window = window;
             AddToClassList("z-grow");
@@ -1077,7 +1076,7 @@ namespace Zetta3D.Editor.Studio
             });
         }
 
-        async Task Handoff(StoredImage stored, Action<ZettaStudioWindow, byte[]> use)
+        async Task Handoff(StoredImage stored, Action<StudioPage, byte[]> use)
         {
             await ZettaUI.Run(null, _error, async () =>
             {

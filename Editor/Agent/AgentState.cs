@@ -9,7 +9,7 @@ namespace Zetta3D.Editor.Agent
     [Serializable]
     public class ChatItem
     {
-        /// <summary>user | assistant | event | step | route | memory | question | ask | approval | image | error | notice</summary>
+        /// <summary>user | assistant | event | step | route | memory | question | ask | approval | image | error | notice | changes (Detail = the turn)</summary>
         public string Kind;
         public string Text;
         public string Detail;
@@ -72,6 +72,9 @@ namespace Zetta3D.Editor.Agent
         public string RouteSource;
         /// <summary>The thinking this turn's message asked for — "auto" or a level — to say who picked it.</summary>
         public string RouteThinkingAsked;
+
+        /// <summary>The change set the agent's tools record into: one per message (see <see cref="AgentChanges"/>).</summary>
+        public string ChangeTurn;
 
         /// <summary>
         /// The user pressed Stop: nothing resumes on its own — no tool results, compile reports or queued job

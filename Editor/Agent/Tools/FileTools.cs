@@ -268,6 +268,7 @@ namespace Zetta3D.Editor.Agent
         public static void EnsureFolder(string folder, bool import = true)
         {
             if (string.IsNullOrEmpty(folder) || folder == "Assets") return;
+            AgentChanges.WillCreateFolder(folder);
             if (import)
             {
                 if (AssetDatabase.IsValidFolder(folder)) return;
@@ -310,6 +311,7 @@ namespace Zetta3D.Editor.Agent
             content = content.Replace("\r\n", "\n");
             if (script && content.Length > 0 && !content.EndsWith("\n")) content += "\n";
             var folder = Path.GetDirectoryName(path)?.Replace('\\', '/');
+            AgentChanges.WillWrite(path);
             EnsureFolder(folder, !script);
             File.WriteAllText(full, content, Utf8);
 
@@ -434,6 +436,7 @@ namespace Zetta3D.Editor.Agent
             if (working == text) return ToolResult.Ok($"{path}: the edits change nothing (replacements equal the originals).");
 
             var encoding = bom ? new UTF8Encoding(true) : Utf8;
+            AgentChanges.WillWrite(path);
             File.WriteAllText(full, working, encoding);
 
             var result = new ToolResult();

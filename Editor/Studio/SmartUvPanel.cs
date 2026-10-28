@@ -14,7 +14,7 @@ namespace Zetta3D.Editor.Studio
         static readonly string[] Orientations = { "as-is", "+x", "-x", "+y", "-y" };
         static readonly string[] OrientationLabels = { "As is", "+X", "−X", "+Y", "−Y" };
 
-        public override string Id => ZettaStudioWindow.SmartUvTab;
+        public override string Id => StudioPage.SmartUvTab;
         public override string Title => "Smart UV";
         protected override string Intro => "Lays the model’s UVs out again as a clean new layout. Its textures, rig and animation are carried across onto it.";
         protected override string Code => "smart_uv";

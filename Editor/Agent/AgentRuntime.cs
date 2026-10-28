@@ -76,6 +76,7 @@ namespace Zetta3D.Editor.Agent
                 Detail = string.Join(" · ", new[] { extras, summary }.Where(x => !string.IsNullOrEmpty(x))),
             });
             ClearPending();
+            AgentChanges.BeginTurn();
             var body = Base();
             body["message"] = message;
             if (images is { Count: > 0 }) body["images"] = JArray.FromObject(images.Take(4));
@@ -198,6 +199,7 @@ namespace Zetta3D.Editor.Agent
                 var replied = State.Items.Skip(lastUser + 1).Any(i => i.Kind == "assistant" && !string.IsNullOrWhiteSpace(i.Text));
                 State.Items.Add(new ChatItem { Kind = "notice", Text = replied ? "Stopped." : "Stopped before it replied." });
             }
+            if (byUser) ShowChanges();
             FinishOpenText();
             ReleaseReloadLocks();
             Notify();
@@ -372,7 +374,26 @@ namespace Zetta3D.Editor.Agent
                 return;
             }
 
+            ShowChanges();
             DrainQueuedEvents();
+        }
+
+        /// <summary>
+        /// The turn is over: what its tools changed goes under the reply as a card to review and undo — once per turn,
+        /// and moved to the end if the turn carried on after an earlier card (an approval, a queued event).
+        /// </summary>
+        static void ShowChanges()
+        {
+            var turn = State.ChangeTurn;
+            if (string.IsNullOrEmpty(turn) || !AgentChanges.Has(turn)) return;
+            var card = State.Items.FirstOrDefault(i => i.Kind == "changes" && i.Detail == turn);
+            if (card != null)
+            {
+                if (State.Items[State.Items.Count - 1] == card) return;
+                State.Items.Remove(card);
+            }
+            State.Items.Add(new ChatItem { Kind = "changes", Detail = turn });
+            Notify();
         }
 
         static void OnEvent(JObject evt, List<ClientToolCall> calls, List<string> awaiting)
@@ -551,6 +572,8 @@ namespace Zetta3D.Editor.Agent
                     step.Status = call.Name == "ask_user" ? "waiting" : "running";
                     context.ToolUseId = call.ToolUseId;
                     Notify();
+                    // What the tool writes, deletes or changes in the scene is recorded, so the turn can be undone.
+                    AgentChanges.Recording = true;
                     try
                     {
                         result = UnityToolbox.Has(call.Name)
@@ -560,6 +583,10 @@ namespace Zetta3D.Editor.Agent
                     catch (Exception e)
                     {
                         result = ToolResult.Error($"{call.Name} failed: {e.Message}");
+                    }
+                    finally
+                    {
+                        AgentChanges.Recording = false;
                     }
                     // Stopped, or a new message took over, while the tool waited (on the user, a download…).
                     if (batch != _batch || State.Phase != "tools") return;
@@ -656,7 +683,7 @@ namespace Zetta3D.Editor.Agent
             Approvals[item] = tcs;
             State.Items.Add(item);
             Notify();
-            AgentWindow.Reveal();
+            AgentPage.Reveal();
             return tcs.Task;
         }
 
@@ -678,7 +705,7 @@ namespace Zetta3D.Editor.Agent
             var tcs = new TaskCompletionSource<List<AskAnswer>>(TaskCreationOptions.RunContinuationsAsynchronously);
             Questions[card] = tcs;
             Notify();
-            AgentWindow.Reveal();
+            AgentPage.Reveal();
             return tcs.Task;
         }
 

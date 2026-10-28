@@ -131,7 +131,7 @@ namespace Zetta3D.Editor.Pipelines.UI
                 row.EnableInClassList("z-pl-run-row--selected", run.Id == _panel?.RunId);
                 row.EnableInClassList("z-pl-run-row--attention", RunStatuses.Tone(run.Status) == RunTone.Attention);
                 var thumb = PipelineUi.Thumb(run.Seed?.ThumbnailUrl, "z-pl-thumb--row");
-                if (string.IsNullOrEmpty(run.Seed?.ThumbnailUrl)) thumb.Add(new Label(run.Seed?.Type == "model" ? "Mdl" : "Pic").Classes("z-pl-thumb-glyph"));
+                if (string.IsNullOrEmpty(run.Seed?.ThumbnailUrl)) thumb.Add(new Label(run.Seed?.Type == "model" ? "Mdl" : run.Seed?.Type == "views" ? "4V" : "Pic").Classes("z-pl-thumb-glyph"));
                 row.Add(thumb);
                 var text = new VisualElement().Classes("z-grow", "z-pl-run-text");
                 text.Add(new Label(string.IsNullOrEmpty(run.Seed?.Name) ? $"Run #{run.Id}" : run.Seed.Name).Classes("z-pl-run-name"));
@@ -453,8 +453,15 @@ namespace Zetta3D.Editor.Pipelines.UI
             if (seed)
             {
                 var step = steps.FirstOrDefault();
-                var url = step?.Output is PictureStepOutput picture ? picture.Picture?.Url : step?.Generation?.ThumbnailUrl ?? _summary?.Seed?.ThumbnailUrl;
+                var url = step?.Output switch
+                {
+                    PictureStepOutput picture => picture.Picture?.Url,
+                    // A Multi-view seed shows its front; its other sides are listed below it.
+                    ViewsStepOutput views => views.Views.FirstOrDefault(v => v.ViewType == "front")?.Picture?.Url ?? _summary?.Seed?.ThumbnailUrl,
+                    _ => step?.Generation?.ThumbnailUrl ?? _summary?.Seed?.ThumbnailUrl,
+                };
                 data.Seed = (url, _summary?.Seed?.Name ?? step?.Generation?.Title);
+                if (node.Kind == NodeKinds.SeedViews) data.Outputs = steps.SelectMany(OutputsOf).ToList();
             }
             else data.Outputs = steps.SelectMany(OutputsOf).ToList();
             return data;
@@ -469,7 +476,7 @@ namespace Zetta3D.Editor.Pipelines.UI
                 case PictureStepOutput picture:
                     return new[] { (picture.Picture?.Url, "Picture") };
                 case ViewsStepOutput views:
-                    return views.Views.Select(v => (v.Picture?.Url, v.ViewType));
+                    return views.Views.Select(v => (v.Picture?.Url, string.IsNullOrEmpty(v.ViewType) ? "View" : char.ToUpperInvariant(v.ViewType[0]) + v.ViewType.Substring(1)));
                 case IsolatedStepOutput isolated:
                     return new[] { (isolated.Character?.Url, "Character") }.Concat(isolated.Parts.Select(p => (p.Picture?.Url, p.Label)));
                 default:

@@ -79,6 +79,11 @@ namespace Zetta3D.Editor.Pipelines.UI
         {
             switch (ctx.Node.Kind)
             {
+                case NodeKinds.SeedViews:
+                    host.Add(ZettaUI.Text(
+                        "Each run gives its own pictures of each side — a front at least, and the back, left and right as you have them. Connect it to Multi-view - Generate 3D or Multi-view - Smart 3D and the model is made from all of them. Press New run to give the pictures; several sets make a run each.",
+                        "z-muted"));
+                    return;
                 case NodeKinds.SeedPicture:
                 case NodeKinds.SeedModel:
                     host.Add(ZettaUI.Text(
@@ -99,6 +104,8 @@ namespace Zetta3D.Editor.Pipelines.UI
                     return;
                 case NodeKinds.Generate3D:
                 case NodeKinds.GenerateSmart3D:
+                case NodeKinds.Generate3DMultiview:
+                case NodeKinds.GenerateSmart3DMultiview:
                     GenerateNodeForm.Build(host, ctx);
                     return;
                 case NodeKinds.Retopology:
@@ -108,7 +115,10 @@ namespace Zetta3D.Editor.Pipelines.UI
                     Segmentation(host, ctx);
                     return;
                 case NodeKinds.Texture:
-                    Texture(host, ctx);
+                    Texture(host, ctx, false);
+                    return;
+                case NodeKinds.TextureMultiview:
+                    Texture(host, ctx, true);
                     return;
                 case NodeKinds.SmartUv:
                     SmartUv(host, ctx);
@@ -412,11 +422,45 @@ namespace Zetta3D.Editor.Pipelines.UI
             });
         }
 
-        static void Texture(VisualElement host, FormContext ctx)
+        /// <summary>
+        /// AI texturing, or Multi-view - AI texturing (<paramref name="multiView"/>): pictures of each side in place of one
+        /// picture or a description — the views wired into it, or, with none, each run's own four pictures.
+        /// </summary>
+        static void Texture(VisualElement host, FormContext ctx, bool multiView)
         {
-            // Always given in each run: the pipeline itself never holds the description or the picture.
-            if (!ctx.InRun) host.Add(GivenInEachRun("texture’s description or reference picture"));
-            else TextureInput(host, ctx);
+            if (!multiView)
+            {
+                // Always given in each run: the pipeline itself never holds the description or the picture.
+                if (!ctx.InRun) host.Add(GivenInEachRun("texture’s description or reference picture"));
+                else TextureInput(host, ctx);
+            }
+            else
+            {
+                // Where its pictures come from: the views wired in (a Multi-view seed, Draw views), or each run's own.
+                var from = ZettaUI.Hint("").Classes("z-pl-note");
+                host.Add(from);
+                var given = GivenInEachRun("set of pictures of each side");
+                host.Add(given);
+                ViewSlots slots = null;
+                if (ctx.InRun)
+                {
+                    slots = new ViewSlots(ctx.OverlayHost, () => ctx.Settings["referenceViews"] as JObject ?? new JObject(),
+                        update => ctx.Set("referenceViews", update(ctx.Settings["referenceViews"] as JObject ?? new JObject())));
+                    host.Add(slots);
+                }
+                ctx.OnRefresh(() =>
+                {
+                    var wired = GraphRules.SourceOf(ctx.Graph, ctx.Node.Id, "views")?.Kind;
+                    from.text = wired == NodeKinds.SeedViews
+                        ? "Textured from the pictures of each side the Multi-view seed gives in each run — the same ones the model was made from, when it was."
+                        : "Textured from the front and the back and sides Draw views draws.";
+                    from.Visible(wired != null);
+                    given.Visible(wired == null && !ctx.InRun);
+                    if (slots == null) return;
+                    slots.Visible(wired == null);
+                    slots.Refresh();
+                });
+            }
 
             Choice(host, ctx, "Texture quality", "tier", ToolSettings.TextureTiers, v =>
             {
@@ -593,6 +637,21 @@ namespace Zetta3D.Editor.Pipelines.UI
                 return credits == null ? "" : credits == 0 ? "Free" : $"+{credits}";
             }
 
+            // A multi-view step says where its pictures come from — or what to connect.
+            if (NodeCatalog.IsMultiViewGenerate(ctx.Node.Kind))
+            {
+                var from = ZettaUI.Hint("").Classes("z-pl-note");
+                host.Add(from);
+                ctx.OnRefresh(() =>
+                {
+                    var wired = GraphRules.SourceOf(ctx.Graph, ctx.Node.Id)?.Kind;
+                    from.text = wired == NodeKinds.SeedViews
+                        ? "Made from the pictures of each side the Multi-view seed gives in each run — the front, and the back, left and right as given."
+                        : wired == NodeKinds.DrawViews
+                            ? "Made from the front and the back and sides Draw views draws from it."
+                            : "Connect a Multi-view seed (pictures of each side) or Draw views.";
+                });
+            }
             host.Add(ZettaUI.FieldLabel("Title"));
             NodeForms.Words(host, ctx, null, "title", "Name this generation", 255, false);
             NodeForms.Check(host, ctx, "Remove background", "removeBackground", true, "The background is removed from the picture coming in before the model is made from it.");
@@ -686,7 +745,8 @@ namespace Zetta3D.Editor.Pipelines.UI
                 var rungs = model is "n1" or "n25";
 
                 // Engines: the tab's, and only multi-view ones when views come in.
-                var ids = GenerateForm.ModelsFor(ctx.Node.Kind).Where(m => ctx.Incoming != PortTypes.Views || MultiViewModels.Contains(m)).ToList();
+                var multiView = NodeCatalog.IsMultiViewGenerate(ctx.Node.Kind) || ctx.Incoming == PortTypes.Views;
+                var ids = GenerateForm.ModelsFor(ctx.Node.Kind).Where(m => !multiView || MultiViewModels.Contains(m)).ToList();
                 var signature = string.Join(",", ids);
                 if (signature != enginesFor)
                 {

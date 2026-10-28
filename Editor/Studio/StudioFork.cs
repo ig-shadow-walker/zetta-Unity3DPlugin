@@ -49,7 +49,7 @@ namespace Zetta3D.Editor.Studio
         {
             public long FromId;
             public string FromTitle;
-            /// <summary><see cref="ZettaStudioWindow.GenerateTab"/> or <see cref="ZettaStudioWindow.SmartTab"/>.</summary>
+            /// <summary><see cref="StudioPage.GenerateTab"/> or <see cref="StudioPage.SmartTab"/>.</summary>
             public string Tab;
             public string Tool;
             public Settings Settings;
@@ -60,8 +60,8 @@ namespace Zetta3D.Editor.Studio
         public static string TabFor(string model)
         {
             if (string.IsNullOrEmpty(model)) return null;
-            if (ZettaCatalog.GenerateModels.Any(m => m.Id == model)) return ZettaStudioWindow.GenerateTab;
-            if (ZettaCatalog.SmartModels.Any(m => m.Id == model)) return ZettaStudioWindow.SmartTab;
+            if (ZettaCatalog.GenerateModels.Any(m => m.Id == model)) return StudioPage.GenerateTab;
+            if (ZettaCatalog.SmartModels.Any(m => m.Id == model)) return StudioPage.SmartTab;
             return null;
         }
 

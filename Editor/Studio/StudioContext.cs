@@ -20,8 +20,8 @@ namespace Zetta3D.Editor.Studio
         /// <summary>Raised on the main thread after the account data (re)loads.</summary>
         public event Action Changed;
 
-        /// <summary>The window hosting the panels; used for tab switching and hand-offs.</summary>
-        public ZettaStudioWindow Window;
+        /// <summary>The Studio page hosting the panels; used for tab switching and hand-offs.</summary>
+        public StudioPage Window;
 
         static StudioContext _shared;
         static string _loadedFor;

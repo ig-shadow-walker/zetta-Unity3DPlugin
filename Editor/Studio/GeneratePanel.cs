@@ -17,7 +17,7 @@ namespace Zetta3D.Editor.Studio
 
         public GeneratePanel(bool smart) => _smart = smart;
 
-        public override string Id => _smart ? ZettaStudioWindow.SmartTab : ZettaStudioWindow.GenerateTab;
+        public override string Id => _smart ? StudioPage.SmartTab : StudioPage.GenerateTab;
         public override string Title => _smart ? "Smart 3D" : "Generate 3D";
 
         const string PlaceholderUrl = "https://zetta3d.ai/placeholder.png";

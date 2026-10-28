@@ -133,11 +133,8 @@ namespace Zetta3D.Editor
         };
         public const string HumanoidRigType = "biped";
 
-        public static readonly string[] ConvertFormats = { "FBX", "GLTF", "OBJ", "USDZ", "STL", "3MF" };
-        public static readonly string[] TextureFormats = { "JPEG", "PNG", "WEBP", "BMP", "DPX", "HDR", "OPEN_EXR", "TARGA", "TIFF" };
+        /// <summary>The facings an export can be turned to (Auto Rig's exportOrientation).</summary>
         public static readonly string[] Orientations = { "+x", "-x", "+y", "-y" };
-        public static readonly string[] FbxPresets = { "blender", "3dsmax", "mixamo" };
-        public static readonly string[] FbxPresetLabels = { "Blender", "3ds Max", "Mixamo" };
 
         public static readonly string[] AspectRatios = { "1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "4:5", "5:4", "21:9" };
         public static readonly string[] Resolutions = { "1K", "2K", "4K" };

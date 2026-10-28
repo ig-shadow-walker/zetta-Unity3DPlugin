@@ -60,6 +60,10 @@ namespace Zetta3D.Editor.Pipelines.UI
         public event Action<string, string, string, string> ConnectRequested;
         /// <summary>(node ids, edge ids) the user deleted.</summary>
         public event Action<List<string>, List<string>> RemoveRequested;
+        /// <summary>(edge id, source, sourceHandle, target, targetHandle) — a connection's end dragged to another socket.</summary>
+        public event Action<string, string, string, string, string> ReconnectRequested;
+        /// <summary>Why a wire dropped on a socket was refused — said, rather than nothing happening.</summary>
+        public event Action<string> Refused;
         /// <summary>Nodes dragged to new places.</summary>
         public event Action<Dictionary<string, NodePosition>> MoveRequested;
         /// <summary>A palette kind dropped on the canvas at a place in graph coordinates.</summary>
@@ -165,7 +169,7 @@ namespace Zetta3D.Editor.Pipelines.UI
                         }
                         RemoveEdgeView(edge.Id);
                     }
-                    var view = new StepEdge { EdgeId = edge.Id, output = output, input = input };
+                    var view = new StepEdge { EdgeId = edge.Id, Canvas = _readOnly ? null : this, output = output, input = input };
                     view.SetColour(PortColour(NodeCatalog.OutputType(_graph.Node(edge.Source)?.Kind, edge.SourceHandle)));
                     view.SetRunning(_running.Contains(edge.Target));
                     if (_readOnly) view.capabilities &= ~(Capabilities.Deletable | Capabilities.Selectable);
@@ -346,8 +350,71 @@ namespace Zetta3D.Editor.Pipelines.UI
         internal void RequestConnect(Edge edge)
         {
             if (_readOnly || !(edge?.output is StepPort output) || !(edge.input is StepPort input)) return;
-            if (!GraphRules.CanConnect(_graph, output.NodeId, output.Handle, input.NodeId, input.Handle)) return;
+            // An existing connection with an end moved: one change, the old wire replaced by the new.
+            if (edge is StepEdge { EdgeId: { } moved } && _graph.Edge(moved) is { } old)
+            {
+                if (old.Source == output.NodeId && old.SourceHandle == output.Handle && old.Target == input.NodeId && old.TargetHandle == input.Handle) return;
+                ReconnectRequested?.Invoke(moved, output.NodeId, output.Handle, input.NodeId, input.Handle);
+                return;
+            }
+            if (!CanvasModel.MayWire(_graph, output.NodeId, output.Handle, input.NodeId, input.Handle))
+            {
+                Refuse(output.NodeId, output.Handle, input.NodeId, input.Handle, null);
+                return;
+            }
             ConnectRequested?.Invoke(output.NodeId, output.Handle, input.NodeId, input.Handle);
+        }
+
+        /// <summary>
+        /// A wire let go away from a socket it could join. Over a socket that cannot take it, says why; on empty canvas,
+        /// a connection being moved is taken away (a new wire just disappears).
+        /// </summary>
+        internal void DroppedOutside(Edge edge, Vector2 position)
+        {
+            if (_readOnly || edge == null) return;
+            var existing = (edge as StepEdge)?.EdgeId;
+            var hit = PortAt(position);
+            if (hit != null)
+            {
+                var from = edge.output as StepPort;
+                var to = edge.input as StepPort;
+                if (hit.direction == Direction.Input) to = hit;
+                else from = hit;
+                if (from != null && to != null && from != to) Refuse(from.NodeId, from.Handle, to.NodeId, to.Handle, existing);
+                return;
+            }
+            if (existing != null && _graph.Edge(existing) != null) RemoveRequested?.Invoke(new List<string>(), new List<string> { existing });
+        }
+
+        void Refuse(string source, string sourceHandle, string target, string targetHandle, string movingEdgeId)
+        {
+            var graph = movingEdgeId == null ? _graph : new PipelineGraph { Nodes = _graph.Nodes, Edges = _graph.Edges.Where(e => e.Id != movingEdgeId).ToList() };
+            var without = new PipelineGraph { Nodes = graph.Nodes, Edges = graph.Edges.Where(e => !(e.Target == target && e.TargetHandle == targetHandle)).ToList() };
+            var problem = GraphRules.ConnectionProblem(without, source, sourceHandle, target, targetHandle);
+            if (problem != null) Refused?.Invoke(problem);
+        }
+
+        /// <summary>The socket under a point in world space, if any (a little slack around each, as a dot is small).</summary>
+        StepPort PortAt(Vector2 world)
+        {
+            foreach (var view in _nodes.Values)
+            foreach (var port in view.Ports)
+            {
+                var rect = port.worldBound;
+                rect.xMin -= 4;
+                rect.xMax += 4;
+                rect.yMin -= 4;
+                rect.yMax += 4;
+                if (rect.Contains(world)) return port;
+            }
+            return null;
+        }
+
+        /// <summary>The ✕ on a selected connection.</summary>
+        internal void RemoveEdge(string edgeId)
+        {
+            if (_readOnly || edgeId == null) return;
+            RemoveRequested?.Invoke(new List<string>(), new List<string> { edgeId });
         }
 
         /// <summary>The inputs a dragged wire may land on: what <see cref="GraphRules.CanConnect"/> allows — types match, no loop.</summary>
@@ -482,7 +549,11 @@ namespace Zetta3D.Editor.Pipelines.UI
         {
             readonly PipelineCanvas _canvas;
             public Listener(PipelineCanvas canvas) => _canvas = canvas;
-            public void OnDropOutsidePort(Edge edge, Vector2 position) => _canvas.Resync();
+            public void OnDropOutsidePort(Edge edge, Vector2 position)
+            {
+                _canvas.DroppedOutside(edge, position);
+                _canvas.Resync();
+            }
 
             public void OnDrop(GraphView graphView, Edge edge)
             {
@@ -492,12 +563,19 @@ namespace Zetta3D.Editor.Pipelines.UI
         }
     }
 
-    /// <summary>A wire, in the colour of what it carries (the web strokes it with the output's type).</summary>
+    /// <summary>
+    /// A wire, in the colour of what it carries (the web strokes it with the output's type). Selected, it is drawn
+    /// thicker with a ✕ at its middle; Delete removes it too, and either end can be dragged to another socket — or off
+    /// onto empty canvas, to remove it.
+    /// </summary>
     public sealed class StepEdge : Edge
     {
         public string EdgeId;
+        /// <summary>The canvas that drew it, when it may be edited; null for a wire being dragged or a read-only run.</summary>
+        public PipelineCanvas Canvas;
         Color _colour = Color.gray;
         bool _running;
+        Button _remove;
 
         public void SetColour(Color colour)
         {
@@ -516,14 +594,46 @@ namespace Zetta3D.Editor.Pipelines.UI
         public override bool UpdateEdgeControl()
         {
             var result = base.UpdateEdgeControl();
-            if (!selected && edgeControl != null)
+            if (edgeControl == null) return result;
+            if (!selected)
             {
                 var colour = _running ? Color.Lerp(_colour, Color.white, 0.35f) : _colour;
                 edgeControl.inputColor = colour;
                 edgeControl.outputColor = colour;
                 edgeControl.edgeWidth = _running ? 3 : 2;
             }
+            else edgeControl.edgeWidth = 4;
+            PlaceRemove();
             return result;
+        }
+
+        public override void OnSelected()
+        {
+            base.OnSelected();
+            PlaceRemove();
+        }
+
+        public override void OnUnselected()
+        {
+            base.OnUnselected();
+            PlaceRemove();
+        }
+
+        /// <summary>The ✕ sits at the wire's middle while it is selected.</summary>
+        void PlaceRemove()
+        {
+            if (Canvas == null || EdgeId == null || edgeControl == null) return;
+            if (_remove == null)
+            {
+                _remove = new Button(() => Canvas?.RemoveEdge(EdgeId)) { text = "✕", tooltip = "Remove this connection (Delete)" };
+                _remove.AddToClassList("z-pl-edge-remove");
+                Add(_remove);
+            }
+            _remove.style.display = selected ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!selected) return;
+            var middle = (edgeControl.from + edgeControl.to) / 2f;
+            _remove.style.left = middle.x - 10;
+            _remove.style.top = middle.y - 10;
         }
     }
 

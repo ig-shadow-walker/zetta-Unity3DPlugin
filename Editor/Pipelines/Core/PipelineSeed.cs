@@ -21,7 +21,7 @@ namespace Zetta3D.Editor.Pipelines
         /// <summary>The seed node's request for the run — what <c>PipelinesApi.BatchAsync</c> sends.</summary>
         public JObject Request = new JObject();
         public string Name;
-        /// <summary>picture | model</summary>
+        /// <summary>picture | model | views</summary>
         public string Type = "picture";
         /// <summary>A ≤160px JPEG of the picture, when one could be made; null otherwise.</summary>
         public byte[] Thumbnail;
@@ -66,6 +66,32 @@ namespace Zetta3D.Editor.Pipelines
             Type = "model",
             ThumbnailUrl = thumbnailUrl,
         };
+
+        /// <summary>
+        /// A Multi-view seed's run: pictures of each side, keyed by side as <see cref="UI.ViewSlots"/> holds them — named
+        /// and previewed by its front.
+        /// </summary>
+        public static PipelineSeed FromViews(JObject set)
+        {
+            var front = set?["front"] as JObject;
+            var name = front?["name"]?.Type == JTokenType.String ? front["name"].ToString() : null;
+            var request = new JObject { ["views"] = NodeSettings.ViewsRequest(set) };
+            if (!string.IsNullOrEmpty(name)) request["name"] = name;
+            byte[] thumbnail = null;
+            var url = front?["thumbnail"]?.Type == JTokenType.String ? front["thumbnail"].ToString() : null;
+            if (url != null && url.StartsWith("data:", StringComparison.Ordinal) && url.IndexOf(',') > 0)
+            {
+                try
+                {
+                    thumbnail = Convert.FromBase64String(url.Substring(url.IndexOf(',') + 1));
+                }
+                catch (FormatException)
+                {
+                    thumbnail = null;
+                }
+            }
+            return new PipelineSeed { Request = request, Name = name ?? "Pictures of each side", Type = "views", Thumbnail = thumbnail };
+        }
 
         /// <summary>A model from the library, by its generation.</summary>
         public static PipelineSeed FromModel(Generation generation) =>

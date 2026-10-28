@@ -7,7 +7,7 @@ namespace Zetta3D.Editor.Studio
     /// <summary>Splits a model into named parts: Segment (as it is) or Smart Segment (rebuilds as it splits).</summary>
     public class SegmentPanel : PostProcessPanel
     {
-        public override string Id => ZettaStudioWindow.SegmentTab;
+        public override string Id => StudioPage.SegmentTab;
         public override string Title => "Segment";
         protected override string Intro => "Split a model into separate, named parts — each one imports as its own object.";
         protected override string Code => _mode == "smart" ? "smart_segmentation" : "ai_segmentation";

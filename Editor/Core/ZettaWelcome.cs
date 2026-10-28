@@ -19,7 +19,7 @@ namespace Zetta3D.Editor
             {
                 EditorPrefs.SetBool(ShownKey, true);
                 if (!ZettaAuth.IsSignedIn || string.IsNullOrEmpty(ZettaPrefs.Token))
-                    Studio.ZettaStudioWindow.Open();
+                    ZettaWindow.Open(ZettaWindow.Studio);
             };
         }
     }

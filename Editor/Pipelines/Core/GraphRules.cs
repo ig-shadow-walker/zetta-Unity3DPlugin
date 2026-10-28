@@ -53,6 +53,23 @@ namespace Zetta3D.Editor.Pipelines
             return !Reaches(graph, target, source);
         }
 
+        /// <summary>
+        /// Why a connection the user is making is refused — said on the canvas rather than nothing happening — or null
+        /// when it can be made (connectionProblem).
+        /// </summary>
+        public static string ConnectionProblem(PipelineGraph graph, string source, string sourceHandle, string target, string targetHandle = "in")
+        {
+            if (CanConnect(graph, source, sourceHandle, target, targetHandle)) return null;
+            var from = graph.Node(source);
+            var to = graph.Node(target);
+            if (from == null || to == null || source == target) return null;
+            var carries = NodeCatalog.OutputType(from.Kind, sourceHandle);
+            var port = NodeCatalog.InputPort(to.Kind, targetHandle);
+            if (carries == null || port == null) return null;
+            if (!port.AcceptsType(carries)) return NodeCatalog.MismatchMessage(to.Kind, carries, port.Accepts);
+            return "That would loop back on itself.";
+        }
+
         /// <summary>Whether <paramref name="to"/> is downstream of (or is) <paramref name="from"/>.</summary>
         public static bool Reaches(PipelineGraph graph, string from, string to)
         {
@@ -190,7 +207,7 @@ namespace Zetta3D.Editor.Pipelines
                     continue;
                 }
                 if (!port.AcceptsType(carries))
-                    problems.Add(new PipelineProblem(target.Id, $"This input takes a {string.Join(" or ", port.Accepts)}, not a {carries}."));
+                    problems.Add(new PipelineProblem(target.Id, NodeCatalog.MismatchMessage(target.Kind, carries, port.Accepts)));
                 var slot = $"{edge.Target}:{edge.TargetHandle}";
                 if (!filled.Add(slot)) problems.Add(new PipelineProblem(target.Id, "An input takes one connection."));
             }
@@ -238,6 +255,14 @@ namespace Zetta3D.Editor.Pipelines
                 var request = node.Request ?? new JObject();
                 if (node.Kind == NodeKinds.AiEdit && !Text(request["prompt"]))
                     problems.Add(new PipelineProblem(node.Id, $"{(string.IsNullOrEmpty(node.Label) ? "AI edit" : node.Label)}: say how to change the picture."));
+                // Multi-view - AI texturing: views wired in, or the run's own pictures of each side, the front at least.
+                if (node.Kind == NodeKinds.TextureMultiview)
+                {
+                    var views = request["referenceViews"] as JArray ?? new JArray();
+                    if (!NodeSettings.ViewsWired(graph, node.Id) && !views.Any(v => v["viewType"]?.ToString() == "front"))
+                        problems.Add(new PipelineProblem(node.Id, $"{(string.IsNullOrEmpty(node.Label) ? "Multi-view - AI texturing" : node.Label)}: add the pictures of each side — a front one at least."));
+                    continue;
+                }
                 if (node.Kind == NodeKinds.Texture)
                 {
                     var given = graph.Edges.Any(e => e.Target == node.Id && e.TargetHandle == "reference")
@@ -293,7 +318,7 @@ namespace Zetta3D.Editor.Pipelines
                     var faces = (long)settings["faces"].Value<double>();
                     return (label, faces * (settings["polygonType"]?.ToString() == "quadrilateral" ? 2 : 1));
                 }
-                if (source.Kind == NodeKinds.Generate3D || source.Kind == NodeKinds.GenerateSmart3D)
+                if (NodeCatalog.IsGenerate(source.Kind))
                 {
                     var raw = settings["polygonCount"]?.ToString() ?? "";
                     if (!double.TryParse(raw.Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var count) ||

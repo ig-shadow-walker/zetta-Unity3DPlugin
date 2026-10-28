@@ -114,6 +114,7 @@ namespace Zetta3D.Editor
                 else
                 {
                     var path = $"{target}/{name}.{file.Extension}";
+                    Agent.AgentChanges.WillWrite(path);
                     File.WriteAllBytes(path, bytes);
                     result.AssetPaths.Add(path);
                 }
@@ -184,6 +185,7 @@ namespace Zetta3D.Editor
             if (extension == "webp" || File.Exists(path))
             {
                 /* Re-imports overwrite the copy already there rather than piling up -1, -2 … */
+                Agent.AgentChanges.WillWrite(path);
                 File.WriteAllBytes(path, bytes);
                 AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
                 return path;
@@ -214,6 +216,7 @@ namespace Zetta3D.Editor
                 var name = Path.GetFileName(entry.FullName);
                 if (string.IsNullOrEmpty(name) || name.StartsWith(".", StringComparison.Ordinal) || entry.FullName.Contains("__MACOSX")) continue;
                 var path = $"{target}/{name}";
+                Agent.AgentChanges.WillWrite(path);
                 using (var input = entry.Open())
                 using (var output = File.Create(path))
                     input.CopyTo(output);
@@ -239,6 +242,7 @@ namespace Zetta3D.Editor
                 site = $"{ZettaConfig.SiteBase}/3d-studio?generation={generation.Id}",
             });
             if (extra != null) manifest.Merge(extra);
+            Agent.AgentChanges.WillWrite($"{target}/zetta.json");
             File.WriteAllText($"{target}/zetta.json", manifest.ToString(Formatting.Indented), Encoding.UTF8);
         }
 
@@ -326,6 +330,7 @@ namespace Zetta3D.Editor
         {
             path = path.Replace('\\', '/').TrimEnd('/');
             if (AssetDatabase.IsValidFolder(path)) return;
+            Agent.AgentChanges.WillCreateFolder(path);
             var parent = Path.GetDirectoryName(path)?.Replace('\\', '/');
             if (!string.IsNullOrEmpty(parent) && !AssetDatabase.IsValidFolder(parent)) EnsureFolder(parent);
             // A folder on disk that Unity has not seen yet: import just it — a full Refresh could start a
@@ -341,6 +346,7 @@ namespace Zetta3D.Editor
             if (!path.StartsWith("Assets/")) throw new ArgumentException("Images must be saved under Assets/.");
             EnsureFolder(Path.GetDirectoryName(path)?.Replace('\\', '/'));
             path = AssetDatabase.GenerateUniqueAssetPath(path);
+            Agent.AgentChanges.WillWrite(path);
             File.WriteAllBytes(path, bytes);
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
             if (AssetImporter.GetAtPath(path) is TextureImporter importer)

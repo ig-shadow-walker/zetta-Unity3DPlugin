@@ -17,6 +17,7 @@ namespace Zetta3D.Editor.Pipelines
                 case NodeKinds.SeedPicture:
                     return new JObject { ["source"] = null };
                 case NodeKinds.SeedModel:
+                case NodeKinds.SeedViews:
                     return new JObject();
                 case NodeKinds.AiEdit:
                     return new JObject { ["prompt"] = "", ["model"] = null, ["for3D"] = true };
@@ -25,6 +26,7 @@ namespace Zetta3D.Editor.Pipelines
                 case NodeKinds.IsolateParts:
                     return ToolSettings.IsolateDefaults();
                 case NodeKinds.Generate3D:
+                case NodeKinds.Generate3DMultiview:
                 {
                     // Spread, not applyFormPatch — so the count stays DEFAULT_FORM's 200,000 (see the report: on N2.5
                     // that reads as a custom count, exactly as on the web).
@@ -33,6 +35,7 @@ namespace Zetta3D.Editor.Pipelines
                     return form;
                 }
                 case NodeKinds.GenerateSmart3D:
+                case NodeKinds.GenerateSmart3DMultiview:
                     return GenerateForm.ApplyPatch(GenerateForm.Defaults(), new JObject { ["model"] = "np1" });
                 case NodeKinds.GenerateSplat:
                 {
@@ -56,6 +59,13 @@ namespace Zetta3D.Editor.Pipelines
                     texture["prompt"] = "";
                     return texture;
                 }
+                case NodeKinds.TextureMultiview:
+                {
+                    var texture = ToolSettings.TextureDefaults();
+                    texture["prompt"] = "";
+                    texture["referenceViews"] = new JObject();
+                    return texture;
+                }
                 case NodeKinds.SmartUv:
                     return ToolSettings.SmartUvDefaults();
                 case NodeKinds.Rigging:
@@ -76,7 +86,7 @@ namespace Zetta3D.Editor.Pipelines
         {
             var defaults = Defaults(kind);
             if (settings == null) return defaults;
-            if (kind == NodeKinds.Generate3D || kind == NodeKinds.GenerateSmart3D) return GenerateForm.ApplyPatch(defaults, settings);
+            if (NodeCatalog.IsGenerate(kind)) return GenerateForm.ApplyPatch(defaults, settings);
             foreach (var pair in settings) defaults[pair.Key] = pair.Value?.DeepClone();
             return defaults;
         }
@@ -89,7 +99,19 @@ namespace Zetta3D.Editor.Pipelines
         /// is; AI edit when its "Set on each run" (settings.askAtRun) is on.
         /// </summary>
         public static bool SetOnEachRun(PipelineNode node) =>
-            node.Kind == NodeKinds.Texture || (node.Kind == NodeKinds.AiEdit && node.Settings?["askAtRun"]?.Type == JTokenType.Boolean && node.Settings["askAtRun"].Value<bool>());
+            node.Kind == NodeKinds.Texture || node.Kind == NodeKinds.TextureMultiview ||
+            (node.Kind == NodeKinds.AiEdit && node.Settings?["askAtRun"]?.Type == JTokenType.Boolean && node.Settings["askAtRun"].Value<bool>());
+
+        /// <summary>
+        /// <see cref="SetOnEachRun"/>, knowing the graph (perRunIn): Multi-view - AI texturing fed views asks nothing of a
+        /// run — it textures from the pictures wired in.
+        /// </summary>
+        public static bool PerRunIn(PipelineGraph graph, PipelineNode node) =>
+            !(node.Kind == NodeKinds.TextureMultiview && ViewsWired(graph, node.Id)) && SetOnEachRun(node);
+
+        /// <summary>Whether something is wired into Multi-view - AI texturing's Views input.</summary>
+        public static bool ViewsWired(PipelineGraph graph, string nodeId) =>
+            graph?.Edges.Any(e => e.Target == nodeId && e.TargetHandle == "views") == true;
 
         /// <summary>One line under a node's name: what it is set to, in the Studio's words (summaryFor).</summary>
         public static string Summary(PipelineNode node)
@@ -102,6 +124,8 @@ namespace Zetta3D.Editor.Pipelines
                     return "A picture, chosen for each run";
                 case NodeKinds.SeedModel:
                     return "A model, chosen for each run";
+                case NodeKinds.SeedViews:
+                    return "Pictures of each side, chosen for each run";
                 case NodeKinds.RemoveBackground:
                     return "Cut-out";
                 case NodeKinds.AiEdit:
@@ -127,6 +151,8 @@ namespace Zetta3D.Editor.Pipelines
                 }
                 case NodeKinds.Generate3D:
                 case NodeKinds.GenerateSmart3D:
+                case NodeKinds.Generate3DMultiview:
+                case NodeKinds.GenerateSmart3DMultiview:
                     return $"{GenerateForm.ModelLabel(Text("model"))} · {(Text("output") == "geometry" ? "Geometry" : "Textured")}";
                 case NodeKinds.GenerateSplat:
                 {
@@ -152,6 +178,12 @@ namespace Zetta3D.Editor.Pipelines
                     var prompt = Text("prompt").Trim();
                     return prompt != "" ? $"{tier} · {Cut(prompt, 32)}" : $"{tier} · set on each run";
                 }
+                case NodeKinds.TextureMultiview:
+                {
+                    var tier = ToolSettings.TextureTierLabel(Text("tier"));
+                    var given = ViewsRequest(s["referenceViews"] as JObject).Count;
+                    return given > 0 ? $"{tier} · {given} view{(given == 1 ? "" : "s")}" : $"{tier} · pictures of each side";
+                }
                 case NodeKinds.SmartUv:
                     return ToolSettings.Truthy(s["bake"]) ? "Textures re-baked" : "Layout only";
                 case NodeKinds.Rigging:
@@ -167,5 +199,31 @@ namespace Zetta3D.Editor.Pipelines
         }
 
         static string Cut(string text, int length) => text.Length <= length ? text : text.Substring(0, length);
+
+        /// <summary>The sides of a multi-view set, in the Studio's slot order (lib/multi-view.ts MULTI_VIEW_SLOTS).</summary>
+        public static readonly string[] ViewKeys = { "front", "back", "left", "right" };
+
+        /// <summary>
+        /// A multi-view set as the server reads it (viewsRequest): each given side once, in the slots' order. The set is
+        /// keyed by side — <c>{ front: { uploadKey | gen2dPostId, name, thumbnail } }</c>, as the web keeps it.
+        /// </summary>
+        public static JArray ViewsRequest(JObject set)
+        {
+            var list = new JArray();
+            if (set == null) return list;
+            foreach (var key in ViewKeys)
+            {
+                if (!(set[key] is JObject view)) continue;
+                var upload = view["uploadKey"]?.Type == JTokenType.String ? view["uploadKey"].ToString() : null;
+                var post = ToolSettings.IsNumber(view["gen2dPostId"]) ? view["gen2dPostId"] : null;
+                if (upload == null && post == null) continue;
+                var entry = new JObject { ["viewType"] = key };
+                if (upload != null) entry["uploadKey"] = upload;
+                else entry["gen2dPostId"] = post.DeepClone();
+                if (view["name"]?.Type == JTokenType.String && view["name"].ToString() != "") entry["name"] = view["name"].ToString();
+                list.Add(entry);
+            }
+            return list;
+        }
     }
 }

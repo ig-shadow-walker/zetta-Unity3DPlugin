@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -12,7 +13,7 @@ namespace Zetta3D.Editor.Pipelines.UI
 {
     /// <summary>
     /// RUN ON… (run-dialog.tsx): the seeds to run on — pictures or models chosen now, each its own run (a batch of up to
-    /// 20) — and Auto or Manual. IT MAKES THE RUNS; IT DOES NOT START THEM: each opens in Runs not started (a draft), with
+    /// 20), or for a Multi-view seed sets of pictures of each side, a run per set — and Auto or Manual. IT MAKES THE RUNS; IT DOES NOT START THEM: each opens in Runs not started (a draft), with
     /// any step set on each run marked Needs input; it starts on its own Start.
     /// </summary>
     public static class RunDialog
@@ -24,19 +25,32 @@ namespace Zetta3D.Editor.Pipelines.UI
             Func<List<RunSummary>, bool, Task> created)
         {
             var seedNode = graph.Seed;
-            var pictures = seedNode?.Kind != NodeKinds.SeedModel;
+            // A Multi-view seed: each run is a SET — pictures of each side, the front at least — so the dialog holds sets.
+            var multiView = seedNode?.Kind == NodeKinds.SeedViews;
+            var pictures = seedNode?.Kind != NodeKinds.SeedModel && !multiView;
             var overlay = new PipelineOverlay("Run on…",
-                $"Each {(pictures ? "picture" : "model")} gets its own run of this pipeline, up to {MaxBatch} at once. The runs open ready to check — each starts when you press Start.");
+                $"Each {(multiView ? "set of pictures" : pictures ? "picture" : "model")} gets its own run of this pipeline, up to {MaxBatch} at once. The runs open ready to check — each starts when you press Start.");
             var seeds = new List<PipelineSeed>();
+            var sets = new List<JObject> { new JObject() };
+            var setsHost = new VisualElement().Classes("z-pl-sets");
+            var missingFront = ZettaUI.Hint("Each set needs a front picture before it can be a run.").Visible(false);
             var uploading = 0;
             var mode = RunStatuses.ModeManual;
             var busy = false;
 
             var grid = new VisualElement().Classes("z-row", "z-row--wrap", "z-pl-seeds");
-            overlay.Body.Add(grid);
             var drop = new Label(pictures ? "Drop pictures here — from Finder or the Project window." : "Drop a .glb (or a model imported from Zetta 3D) here.").Classes("z-pl-dropzone");
-            overlay.Body.Add(drop);
             var buttons = new VisualElement().Classes("z-row", "z-row--wrap");
+            if (multiView)
+            {
+                overlay.Body.Add(setsHost);
+                overlay.Body.Add(missingFront);
+            }
+            else
+            {
+                overlay.Body.Add(grid);
+                overlay.Body.Add(drop);
+            }
             overlay.Body.Add(buttons);
             var problem = new Label().Classes("z-error").Visible(false);
 
@@ -58,8 +72,48 @@ namespace Zetta3D.Editor.Pipelines.UI
                 problem.Visible(!string.IsNullOrEmpty(message));
             }
 
+            void RenderSets()
+            {
+                setsHost.Clear();
+                for (var i = 0; i < sets.Count; i++)
+                {
+                    var index = i;
+                    var section = new VisualElement().Classes("z-pl-set");
+                    var head = new VisualElement().Classes("z-row");
+                    head.Add(new Label($"Run {index + 1}").Classes("z-pl-set-title", "z-grow"));
+                    if (sets.Count > 1)
+                        head.Add(ZettaUI.Button("Remove this set", () =>
+                        {
+                            sets.RemoveAt(index);
+                            RenderSets();
+                            Render();
+                        }, "z-button--small", "z-button--ghost"));
+                    section.Add(head);
+                    section.Add(new ViewSlots(host, () => sets[index], update =>
+                    {
+                        if (index >= sets.Count) return;
+                        sets[index] = update(sets[index]);
+                        Render();
+                    }));
+                    setsHost.Add(section);
+                }
+            }
+
             void Render()
             {
+                if (multiView)
+                {
+                    // A set is a run once it has its front; a set started without one holds the button back.
+                    seeds.Clear();
+                    seeds.AddRange(sets.Where(ViewSlots.HasFront).Select(PipelineSeed.FromViews));
+                    var unfinished = sets.Any(s => !ViewSlots.HasFront(s) && s.Count > 0);
+                    missingFront.Visible(unfinished);
+                    foreach (var button in buttons.Query<Button>().ToList()) button.SetEnabled(sets.Count < MaxBatch && !busy);
+                    total.text = creditsPerRun == null || seeds.Count == 0 ? "" : $"Up to {creditsPerRun * seeds.Count} credits";
+                    create.text = busy ? "Creating…" : seeds.Count > 1 ? $"Create {seeds.Count} runs" : "Create the run";
+                    create.SetEnabled(!busy && seeds.Count > 0 && !unfinished);
+                    return;
+                }
                 grid.Clear();
                 for (var i = 0; i < seeds.Count; i++)
                 {
@@ -198,7 +252,18 @@ namespace Zetta3D.Editor.Pipelines.UI
                 }
             }
 
-            if (pictures)
+            if (multiView)
+            {
+                buttons.Add(ZettaUI.Button("Add another set", () =>
+                {
+                    if (sets.Count >= MaxBatch) return;
+                    sets.Add(new JObject());
+                    RenderSets();
+                    Render();
+                }, "z-button--small"));
+                RenderSets();
+            }
+            else if (pictures)
             {
                 buttons.Add(ZettaUI.Button("Upload pictures", () =>
                 {
@@ -260,6 +325,8 @@ namespace Zetta3D.Editor.Pipelines.UI
             });
             overlay.Card.RegisterCallback<DragPerformEvent>(async _ =>
             {
+                // A set's pictures go onto their own slots (each slot takes a drop).
+                if (multiView) return;
                 DragAndDrop.AcceptDrag();
                 Fail(null);
                 var textures = DragAndDrop.objectReferences.OfType<Texture2D>().ToList();
@@ -301,6 +368,7 @@ namespace Zetta3D.Editor.Pipelines.UI
 
             create.clicked += async () =>
             {
+                if (multiView) Render();
                 if (busy || seeds.Count == 0 || uploading > 0) return;
                 busy = true;
                 Fail(null);

@@ -11,25 +11,33 @@ namespace Zetta3D.Editor.Pipelines
     {
         public const string SeedPicture = "seed_picture";
         public const string SeedModel = "seed_model";
+        /// <summary>Pictures of each side — front, back, left, right — chosen for each run (2026-10-28).</summary>
+        public const string SeedViews = "seed_views";
         public const string RemoveBackground = "remove_background";
         public const string AiEdit = "ai_edit";
         public const string DrawViews = "draw_views";
         public const string IsolateParts = "isolate_parts";
         public const string Generate3D = "generate_3d";
         public const string GenerateSmart3D = "generate_smart_3d";
+        /// <summary>Generate 3D and Smart 3D from pictures of each side — their own steps (2026-10-28).</summary>
+        public const string Generate3DMultiview = "generate_3d_multiview";
+        public const string GenerateSmart3DMultiview = "generate_smart_3d_multiview";
         public const string GenerateSplat = "generate_splat";
         public const string Retopology = "retopology";
         public const string Segmentation = "segmentation";
         public const string SmartSegmentation = "smart_segmentation";
         public const string Texture = "texture";
+        /// <summary>AI texturing from pictures of each side — wired in as Views, or given in each run (2026-10-28).</summary>
+        public const string TextureMultiview = "texture_multiview";
         public const string SmartUv = "smart_uv";
         public const string Rigging = "rigging";
         public const string Export = "export";
 
         public static readonly string[] All =
         {
-            SeedPicture, SeedModel, RemoveBackground, AiEdit, DrawViews, IsolateParts, Generate3D, GenerateSmart3D,
-            GenerateSplat, Retopology, Segmentation, SmartSegmentation, Texture, SmartUv, Rigging, Export,
+            SeedPicture, SeedModel, SeedViews, RemoveBackground, AiEdit, DrawViews, IsolateParts, Generate3D, GenerateSmart3D,
+            Generate3DMultiview, GenerateSmart3DMultiview, GenerateSplat, Retopology, Segmentation, SmartSegmentation, Texture,
+            TextureMultiview, SmartUv, Rigging, Export,
         };
     }
 
@@ -152,12 +160,13 @@ namespace Zetta3D.Editor.Pipelines
         /// <summary>The steps whose Studio tool has an engine to choose (ENGINE_CHOICE).</summary>
         public static readonly HashSet<string> EngineChoice = new HashSet<string>
         {
-            NodeKinds.Generate3D, NodeKinds.GenerateSmart3D, NodeKinds.GenerateSplat, NodeKinds.Retopology,
+            NodeKinds.Generate3D, NodeKinds.GenerateSmart3D, NodeKinds.Generate3DMultiview, NodeKinds.GenerateSmart3DMultiview,
+            NodeKinds.GenerateSplat, NodeKinds.Retopology,
         };
 
         static InputPortSpec[] PictureIn => new[] { new InputPortSpec { Handle = "in", Label = "Picture", Accepts = new[] { PortTypes.Picture }, Required = true } };
         static InputPortSpec[] MeshIn => new[] { new InputPortSpec { Handle = "in", Label = "Model", Accepts = new[] { PortTypes.Mesh }, Required = true } };
-        static InputPortSpec[] PictureOrViewsIn => new[] { new InputPortSpec { Handle = "in", Label = "Picture or views", Accepts = new[] { PortTypes.Picture, PortTypes.Views }, Required = true } };
+        static InputPortSpec[] ViewsIn => new[] { new InputPortSpec { Handle = "in", Label = "Views", Accepts = new[] { PortTypes.Views }, Required = true } };
         static OutputPortSpec[] Out(string label, string type) => new[] { new OutputPortSpec { Handle = "out", Label = label, Type = type } };
         static OutputPortSpec[] MeshOut => Out("Model", PortTypes.Mesh);
         static OutputPortSpec[] PictureOut => Out("Picture", PortTypes.Picture);
@@ -166,6 +175,8 @@ namespace Zetta3D.Editor.Pipelines
         {
             new NodeSpec { Kind = NodeKinds.SeedPicture, Label = "Picture seed", Blurb = "The picture the pipeline starts from — upload one, pick one, or make one.", Group = NodeGroup.Seed, Inputs = new InputPortSpec[0], Outputs = PictureOut, Offered = true },
             new NodeSpec { Kind = NodeKinds.SeedModel, Label = "Model seed", Blurb = "A model from your library, or one you upload.", Group = NodeGroup.Seed, Inputs = new InputPortSpec[0], Outputs = MeshOut, Offered = true },
+            // Each run gives pictures of each side, which reach a generation as a multi-view job — the shape Draw views makes.
+            new NodeSpec { Kind = NodeKinds.SeedViews, Label = "Multi-view seed", Blurb = "Pictures of each side — front, back, left, right — for a multi-view generation.", Group = NodeGroup.Seed, Inputs = new InputPortSpec[0], Outputs = Out("Views", PortTypes.Views), Offered = true },
             new NodeSpec { Kind = NodeKinds.RemoveBackground, Label = "Remove background", Blurb = "Cuts the subject out of its background. Free.", Group = NodeGroup.Picture, Inputs = PictureIn, Outputs = PictureOut, Offered = true },
             new NodeSpec { Kind = NodeKinds.AiEdit, Label = "AI edit", Blurb = "Changes the picture by an instruction.", Group = NodeGroup.Picture, Inputs = PictureIn, Outputs = PictureOut, Offered = true },
             new NodeSpec { Kind = NodeKinds.DrawViews, Label = "Draw views", Blurb = "Draws the back and sides from one picture, for a multi-view generation.", Group = NodeGroup.Picture, Inputs = PictureIn, Outputs = Out("Views", PortTypes.Views), Offered = true },
@@ -179,13 +190,30 @@ namespace Zetta3D.Editor.Pipelines
                     new OutputPortSpec { Handle = "each", Label = "Each part", Type = PortTypes.Picture },
                 },
             },
-            new NodeSpec { Kind = NodeKinds.Generate3D, Label = "Generate 3D", Blurb = "A model from a picture or from several views. Zetta N1 or N2.5.", Group = NodeGroup.Make, Inputs = PictureOrViewsIn, Outputs = MeshOut, ThreeD = true, Offered = true },
-            new NodeSpec { Kind = NodeKinds.GenerateSmart3D, Label = "Generate Smart 3D", Blurb = "Clean topology from a picture or views. Zetta Np1 or Np1.5.", Group = NodeGroup.Make, Inputs = PictureOrViewsIn, Outputs = MeshOut, ThreeD = true, Offered = true },
+            // One picture, or pictures of each side — two steps each, as the Studio's two sources. Fed the wrong one, a
+            // generation's error names the other (MismatchMessage).
+            new NodeSpec { Kind = NodeKinds.Generate3D, Label = "Generate 3D", Blurb = "A model from one picture. Zetta N1 or N2.5.", Group = NodeGroup.Make, Inputs = PictureIn, Outputs = MeshOut, ThreeD = true, Offered = true },
+            new NodeSpec { Kind = NodeKinds.GenerateSmart3D, Label = "Generate Smart 3D", Blurb = "Clean topology from one picture. Zetta Np1 or Np1.5.", Group = NodeGroup.Make, Inputs = PictureIn, Outputs = MeshOut, ThreeD = true, Offered = true },
+            new NodeSpec { Kind = NodeKinds.Generate3DMultiview, Label = "Multi-view - Generate 3D", Blurb = "A model from pictures of each side — a Multi-view seed or Draw views. Zetta N1 or N2.5.", Group = NodeGroup.Make, Inputs = ViewsIn, Outputs = MeshOut, ThreeD = true, Offered = true },
+            new NodeSpec { Kind = NodeKinds.GenerateSmart3DMultiview, Label = "Multi-view - Smart 3D", Blurb = "Clean topology from pictures of each side — a Multi-view seed or Draw views. Zetta Np1 or Np1.5.", Group = NodeGroup.Make, Inputs = ViewsIn, Outputs = MeshOut, ThreeD = true, Offered = true },
             new NodeSpec { Kind = NodeKinds.GenerateSplat, Label = "Generate Splat", Blurb = "A splat object or environment from a picture.", Group = NodeGroup.Make, Inputs = PictureIn, Outputs = Out("Splat", PortTypes.Splat), ThreeD = true, Offered = false, EarlyAccess = true, NotAvailableInUnity = true },
             new NodeSpec { Kind = NodeKinds.Retopology, Label = "Retopology", Blurb = "A clean mesh at the polygon budget you set.", Group = NodeGroup.Refine, Inputs = MeshIn, Outputs = MeshOut, ThreeD = true, Offered = true },
             new NodeSpec { Kind = NodeKinds.Segmentation, Label = "Segmentation", Blurb = "Splits the model into parts — AI or Smart.", Group = NodeGroup.Refine, Inputs = MeshIn, Outputs = MeshOut, ThreeD = true, Offered = true },
             new NodeSpec { Kind = NodeKinds.SmartSegmentation, Label = "Smart segmentation", Blurb = "Splits the model into named parts.", Group = NodeGroup.Refine, Inputs = MeshIn, Outputs = MeshOut, ThreeD = true, Offered = false, NotAvailableInUnity = true },
             new NodeSpec { Kind = NodeKinds.Texture, Label = "AI texturing", Blurb = "New textures, from a reference picture or a description.", Group = NodeGroup.Refine, Inputs = MeshIn, Outputs = MeshOut, ThreeD = true, Offered = true },
+            // The model in, and pictures of each side — wired into Views from a Multi-view seed or Draw views (the same
+            // pictures the model was made from), or, with nothing wired, given in each run.
+            new NodeSpec
+            {
+                Kind = NodeKinds.TextureMultiview, Label = "Multi-view - AI texturing",
+                Blurb = "New textures from pictures of each side — wired from a Multi-view seed or Draw views, or given in each run.",
+                Group = NodeGroup.Refine, Outputs = MeshOut, ThreeD = true, Offered = true,
+                Inputs = new[]
+                {
+                    new InputPortSpec { Handle = "in", Label = "Model", Accepts = new[] { PortTypes.Mesh }, Required = true },
+                    new InputPortSpec { Handle = "views", Label = "Views", Accepts = new[] { PortTypes.Views }, Required = false },
+                },
+            },
             new NodeSpec { Kind = NodeKinds.SmartUv, Label = "Smart UV", Blurb = "A new UV layout, textures re-baked onto it. Up to 80,000 triangles.", Group = NodeGroup.Refine, Inputs = MeshIn, Outputs = MeshOut, ThreeD = true, Offered = true },
             new NodeSpec { Kind = NodeKinds.Rigging, Label = "Auto rig", Blurb = "A skeleton, skinned, ready to animate.", Group = NodeGroup.Refine, Inputs = MeshIn, Outputs = MeshOut, ThreeD = true, Offered = true },
             new NodeSpec { Kind = NodeKinds.Export, Label = "Export", Blurb = "GLB, FBX, OBJ or STL. Free.", Group = NodeGroup.Output, Inputs = MeshIn, Outputs = Out("File", PortTypes.File), Offered = false, NotAvailableInUnity = true },
@@ -208,7 +236,67 @@ namespace Zetta3D.Editor.Pipelines
 
         public static bool IsKnown(string kind) => kind != null && Specs.ContainsKey(kind);
 
-        public static bool IsSeed(string kind) => kind == NodeKinds.SeedPicture || kind == NodeKinds.SeedModel;
+        public static bool IsSeed(string kind) => kind == NodeKinds.SeedPicture || kind == NodeKinds.SeedModel || kind == NodeKinds.SeedViews;
+
+        /// <summary>One of the two multi-view generations — Multi-view - Generate 3D or - Smart 3D.</summary>
+        public static bool IsMultiViewGenerate(string kind) => kind == NodeKinds.Generate3DMultiview || kind == NodeKinds.GenerateSmart3DMultiview;
+
+        /// <summary>Any of the four Generate steps — they share the Studio's Generate form.</summary>
+        public static bool IsGenerate(string kind) => kind == NodeKinds.Generate3D || kind == NodeKinds.GenerateSmart3D || IsMultiViewGenerate(kind);
+
+        /// <summary>A Smart 3D step, one picture or pictures of each side (the Np engines).</summary>
+        public static bool IsSmartGenerate(string kind) => kind == NodeKinds.GenerateSmart3D || kind == NodeKinds.GenerateSmart3DMultiview;
+
+        static readonly Dictionary<string, string> MultiViewOf = new Dictionary<string, string>
+        {
+            [NodeKinds.Generate3D] = NodeKinds.Generate3DMultiview,
+            [NodeKinds.GenerateSmart3D] = NodeKinds.GenerateSmart3DMultiview,
+        };
+
+        static readonly Dictionary<string, string> OnePictureOf = MultiViewOf.ToDictionary(p => p.Value, p => p.Key);
+
+        /// <summary>
+        /// Why a connection does not fit, in words — the server's own mismatchMessage. A one-picture generation fed views
+        /// names its multi-view step, and the other way round.
+        /// </summary>
+        public static string MismatchMessage(string kind, string carries, IReadOnlyList<string> accepts)
+        {
+            if (carries == PortTypes.Views && MultiViewOf.TryGetValue(kind, out var multi))
+                return $"{Label(kind)} takes one picture. For pictures of each side, use {Label(multi)}.";
+            if (carries == PortTypes.Picture && OnePictureOf.TryGetValue(kind, out var one))
+                return $"{Label(kind)} takes pictures of each side — connect a Multi-view seed or Draw views, or use {Label(one)} for one picture.";
+            return $"{Label(kind)} takes a {string.Join(" or ", accepts)} here, not {(carries == PortTypes.Views ? "views" : "a " + carries)}.";
+        }
+
+        /// <summary>
+        /// A GENERATION FED VIEWS BECOMES ITS MULTI-VIEW STEP — the server's withMultiViewSteps, applied when a pipeline
+        /// opens, so one saved before the split (Draw views into Generate 3D) keeps working with every setting it had.
+        /// Returns the same instance when nothing changes.
+        /// </summary>
+        public static PipelineGraph WithMultiViewSteps(PipelineGraph graph)
+        {
+            var fedViews = new HashSet<string>(graph.Edges.Where(e =>
+            {
+                var source = graph.Node(e.Source);
+                return e.TargetHandle == "in" && source != null && OutputType(source.Kind, e.SourceHandle) == PortTypes.Views;
+            }).Select(e => e.Target));
+            // AI texturing in its multi-view mode (the first take, 2026-10-28) is its own step now.
+            bool MultiViewTexture(PipelineNode n) =>
+                n.Kind == NodeKinds.Texture && (n.Request?["referenceMode"]?.ToString() == "multi-view" || n.Settings?["referenceMode"]?.ToString() == "multi-view");
+            if (!graph.Nodes.Any(n => (fedViews.Contains(n.Id) && MultiViewOf.ContainsKey(n.Kind)) || MultiViewTexture(n))) return graph;
+            var next = graph.Clone();
+            foreach (var node in next.Nodes)
+            {
+                if (fedViews.Contains(node.Id) && MultiViewOf.TryGetValue(node.Kind, out var multi)) node.Kind = multi;
+                else if (MultiViewTexture(node))
+                {
+                    node.Kind = NodeKinds.TextureMultiview;
+                    node.Settings?.Remove("referenceMode");
+                    node.Request?.Remove("referenceMode");
+                }
+            }
+            return next;
+        }
 
         public static bool IsThreeD(string kind) => Spec(kind)?.ThreeD == true;
 

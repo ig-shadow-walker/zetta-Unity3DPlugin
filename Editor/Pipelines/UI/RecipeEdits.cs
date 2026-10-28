@@ -29,7 +29,7 @@ namespace Zetta3D.Editor.Pipelines.UI
             if (node == null || patch == null) return null;
             var current = FormContext.SettingsOf(node);
             JObject next;
-            if (node.Kind == NodeKinds.Generate3D || node.Kind == NodeKinds.GenerateSmart3D) next = GenerateForm.ApplyPatch(current, patch);
+            if (NodeCatalog.IsGenerate(node.Kind)) next = GenerateForm.ApplyPatch(current, patch);
             else
             {
                 next = current;

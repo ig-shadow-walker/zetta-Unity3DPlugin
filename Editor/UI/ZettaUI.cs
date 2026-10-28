@@ -329,35 +329,28 @@ namespace Zetta3D.Editor
 
         // ─── Account ────────────────────────────────────────────────────────────────
 
-        /// <summary>The header strip: brand, account, credits, sign out.</summary>
-        public static VisualElement Header(string title, Action extra = null)
+        /// <summary>
+        /// The Zetta 3D window's header: brand, the page tabs, account, credits, sign out. <paramref name="navigate"/>
+        /// gets the page id (<see cref="ZettaWindow.Studio"/>, <see cref="ZettaWindow.Library"/>…) a tab was clicked for.
+        /// </summary>
+        public static VisualElement Header(Action<string> navigate)
         {
             var header = new VisualElement().Classes("z-header");
             header.Add(new VisualElement().Classes("z-brand-dot"));
-            header.Add(new Label(title).Classes("z-brand"));
+            header.Add(new Label("Zetta 3D").Classes("z-brand"));
 
-            // The three Zetta windows, one click apart: the Agent and Pipelines are their own dockable windows,
-            // so without these they were only reachable from Window › Zetta 3D.
             var nav = new VisualElement().Classes("z-row", "z-header-nav");
-            foreach (var (label, menu, tip) in new[]
+            foreach (var (page, label, tip) in new[]
                      {
-                         ("3D Studio", "Window/Zetta 3D/3D Studio", "Generate, process and import models"),
-                         ("My Generations", "Window/Zetta 3D/My Generations", "Everything you have made on Zetta 3D — import it into the project"),
-                         ("Pipelines", "Window/Zetta 3D/Pipelines", "Chain the Studio's tools into reusable 3D pipelines"),
-                         ("Agent", "Window/Zetta 3D/Agent", "The Zetta Unity Agent — builds your game in the Editor"),
+                         (ZettaWindow.Studio, "3D Studio", "Generate, process and import models"),
+                         (ZettaWindow.Library, "My Generations", "Everything you have made on Zetta 3D — import it into the project"),
+                         (ZettaWindow.Pipelines, "Pipelines", "Chain the Studio's tools into reusable 3D pipelines"),
+                         (ZettaWindow.Agent, "Agent", "The Zetta Unity Agent — builds your game in the Editor"),
                      })
             {
-                var here = title switch
-                {
-                    "3D Studio" => label == "3D Studio",
-                    "3D Pipelines" => label == "Pipelines",
-                    "Zetta Agent" => label == "Agent",
-                    _ => false,
-                };
-                var button = Button(label, () => EditorApplication.ExecuteMenuItem(menu), "z-nav", "z-button--small");
-                button.name = "nav-" + label;
+                var button = Button(label, () => navigate(page), "z-nav", "z-button--small");
+                button.name = "nav-" + page;
                 button.tooltip = tip;
-                button.EnableInClassList("z-nav--active", here);
                 nav.Add(button);
             }
             header.Add(nav);
@@ -390,15 +383,32 @@ namespace Zetta3D.Editor
             }
 
             Render();
-            ZettaAuth.Changed += Render;
-            header.RegisterCallback<DetachFromPanelEvent>(_ => ZettaAuth.Changed -= Render);
+            WhileOnScreen(header, h => ZettaAuth.Changed += h, h => ZettaAuth.Changed -= h, Render);
             return header;
         }
 
-        /// <summary>Highlights the header link for where the user is (e.g. "My Generations" inside the 3D Studio).</summary>
-        public static void SetActiveNav(VisualElement header, string label)
+        /// <summary>Highlights the header tab for the page shown (a <see cref="ZettaWindow"/> page id).</summary>
+        public static void SetActiveNav(VisualElement header, string page)
         {
-            header?.Query<Button>(className: "z-nav").ForEach(b => b.EnableInClassList("z-nav--active", b.name == "nav-" + label));
+            header?.Query<Button>(className: "z-nav").ForEach(b => b.EnableInClassList("z-nav--active", b.name == "nav-" + page));
+        }
+
+        /// <summary>
+        /// Keeps <paramref name="handler"/> on an event while <paramref name="element"/> is on screen, and runs it each
+        /// time the element comes back. A window whose tab is hidden behind another tab in its dock area is taken off
+        /// its panel; an element that stopped listening then and never listened again missed the sign-in, and showed
+        /// "signed out" until the window was reopened.
+        /// </summary>
+        public static void WhileOnScreen(VisualElement element, Action<Action> subscribe, Action<Action> unsubscribe, Action handler)
+        {
+            subscribe(handler);
+            element.RegisterCallback<AttachToPanelEvent>(_ =>
+            {
+                unsubscribe(handler);
+                subscribe(handler);
+                handler();
+            });
+            element.RegisterCallback<DetachFromPanelEvent>(_ => unsubscribe(handler));
         }
 
         /// <summary>
@@ -426,8 +436,7 @@ namespace Zetta3D.Editor
             }
 
             Render();
-            ZettaAuth.Changed += Render;
-            host.RegisterCallback<DetachFromPanelEvent>(_ => ZettaAuth.Changed -= Render);
+            WhileOnScreen(host, h => ZettaAuth.Changed += h, h => ZettaAuth.Changed -= h, Render);
             return host;
         }
 

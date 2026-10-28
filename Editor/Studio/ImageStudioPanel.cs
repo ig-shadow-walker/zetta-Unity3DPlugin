@@ -22,7 +22,7 @@ namespace Zetta3D.Editor.Studio
         static readonly string[] Ratios = { "9:16", "2:3", "3:4", "4:5", "1:1", "5:4", "4:3", "3:2", "16:9", "21:9" };
         static readonly string[] RatioLabels = { "9:16 · Story", "2:3", "3:4", "4:5 · Post", "1:1 · Square", "5:4", "4:3", "3:2", "16:9 · Wide", "21:9 · Cinema" };
 
-        public override string Id => ZettaStudioWindow.ImagesTab;
+        public override string Id => StudioPage.ImagesTab;
         public override string Title => "Image Studio";
 
         class Result
@@ -136,7 +136,7 @@ namespace Zetta3D.Editor.Studio
             historyHead.Add(ZettaUI.Spacer());
             historyHead.Add(ZettaUI.Button("All images", () =>
             {
-                if (Ctx.Window?.ShowTab(ZettaStudioWindow.LibraryTab) is LibraryPanel library) library.ShowImages();
+                if (Ctx.Window?.ShowTab(StudioPage.LibraryTab) is LibraryPanel library) library.ShowImages();
             }, "z-button--small", "z-button--ghost"));
             historyHead.Add(ZettaUI.Button("Refresh", () => _ = LoadHistory(), "z-button--small", "z-button--ghost"));
             historyCard.Add(historyHead);

@@ -44,7 +44,7 @@ namespace Zetta3D.Editor.Agent
 
         static void Add(Object[] objects)
         {
-            var tagged = AgentWindow.AddToChat(objects);
+            var tagged = AgentPage.AddToChat(objects);
             if (tagged == 0) EditorWindow.focusedWindow?.ShowNotification(new GUIContent("Select scene objects or project assets to add them to the agent."));
         }
     }

@@ -378,7 +378,7 @@
 
 /* ── 3D Pipelines, 2026-10-19 (list, node canvas, runs) ───────────────── */
 
-.z-pl-root { position: relative; }
+.z-pl-root { position: relative; flex-grow: 1; }
 .z-pl-host { flex-grow: 1; }
 .z-pl-list { flex-grow: 1; }
 .z-pl-pad { padding: 6px 12px; }
@@ -769,3 +769,77 @@
 .z-ask-text .unity-base-text-field__input { min-height: 40px; white-space: normal; background-color: var(--z-void); border-radius: 8px; border-color: var(--z-border); color: var(--z-text); padding: 6px 8px; -unity-text-align: upper-left; }
 .z-ask-actions { margin-top: 12px; }
 .z-ask-actions .z-button { margin: 0 8px 0 0; }
+
+/* The Zetta 3D window's pages: one shown at a time, each filling the space under the header. */
+.z-pages { flex-grow: 1; }
+.z-page { flex-grow: 1; }
+
+/* The agent's changes card: what a message changed, with Undo for each line and for all of it. */
+.z-changes { background-color: var(--z-card); border-radius: 12px; padding: 10px 12px; margin: 10px 0; }
+.z-changes-head { margin-bottom: 6px; }
+.z-changes-title { font-size: 12px; -unity-font-style: bold; color: var(--z-text); }
+.z-changes-row { min-height: 26px; padding: 2px 0; border-top-width: 1px; border-top-color: rgba(255, 255, 255, 0.05); }
+.z-changes-kind { margin-right: 8px; min-width: 56px; -unity-text-align: middle-center; }
+.z-changes-path { color: var(--z-text); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 1; }
+.z-changes-path:hover { color: var(--z-signal-text); }
+.z-changes-detail { margin: 0 8px; }
+.z-changes-row--undone .z-changes-path { color: var(--z-text-2); }
+.z-changes-row--undone .z-changes-kind { opacity: 0.5; }
+.z-changes-problem { margin-top: 6px; white-space: normal; }
+.z-changes-row { cursor: link; }
+.z-changes-row:hover { background-color: rgba(255, 255, 255, 0.03); }
+.z-changes-chevron { width: 14px; color: var(--z-text-2); font-size: 10px; -unity-text-align: middle-center; }
+
+/* A changes-card line opened: its diff, contents or steps. Added and removed lines are a wash, never a stroke. */
+.z-diff { margin: 2px 0 8px 14px; padding: 6px 8px; border-radius: 8px; background-color: rgba(0, 0, 0, 0.22); }
+.z-diff-head { margin-bottom: 4px; }
+.z-diff-added { color: var(--z-success); margin-right: 8px; font-size: 11px; }
+.z-diff-removed { color: var(--z-error); margin-right: 8px; font-size: 11px; }
+.z-diff-note { margin: 2px 0 4px 0; white-space: normal; }
+.z-diff-lines { max-height: 360px; }
+.z-diff-line { flex-direction: row; min-height: 16px; padding: 0 4px; }
+.z-diff-line--add { background-color: rgba(109, 191, 149, 0.13); }
+.z-diff-line--del { background-color: rgba(228, 117, 107, 0.13); }
+.z-diff-line--fold { background-color: rgba(255, 255, 255, 0.03); }
+.z-diff-line--fold .z-diff-text { color: var(--z-text-2); -unity-font-style: italic; }
+.z-diff-num { width: 34px; color: var(--z-text-2); font-size: 10px; -unity-text-align: middle-right; margin-right: 6px; opacity: 0.7; }
+.z-diff-sign { width: 12px; color: var(--z-text-2); font-size: 11px; -unity-text-align: middle-center; }
+.z-diff-text { font-size: 11px; color: var(--z-text); white-space: nowrap; margin: 0; padding: 0; }
+.z-diff-line--add .z-diff-sign { color: var(--z-success); }
+.z-diff-line--del .z-diff-sign { color: var(--z-error); }
+.z-changes-row--kept .z-changes-kind { opacity: 0.6; }
+
+/* The Agent tab's activity dots: lit in turn while the agent works, still and amber while it waits on you. */
+.z-nav--activity { flex-direction: row; align-items: center; }
+.z-nav-label { margin: 0; padding: 0; -unity-font-style: bold; }
+.z-nav-activity { flex-direction: row; align-items: center; margin-left: 6px; }
+.z-nav-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 3px;
+    margin-left: 2px;
+    background-color: var(--z-signal-text);
+    opacity: 0.25;
+    transition-property: opacity;
+    transition-duration: 0.22s;
+    transition-timing-function: ease-out-cubic;
+}
+.z-nav-dot--on { opacity: 1; }
+.z-nav-activity--waiting .z-nav-dot { background-color: var(--z-amber); opacity: 0.9; }
+
+/* Pictures of each side: the four multi-view slots (a Multi-view seed's run, multi-view texturing). */
+.z-pl-views { margin: 6px 0; }
+.z-pl-view-grid { flex-wrap: wrap; align-items: flex-start; }
+.z-pl-view-slot { width: 112px; margin: 0 8px 8px 0; padding: 6px; border-radius: 9px; background-color: rgba(255, 255, 255, 0.04); }
+.z-pl-view-slot--missing { background-color: rgba(255, 255, 255, 0.08); }
+.z-pl-view-box { height: 100px; border-radius: 6px; background-color: rgba(0, 0, 0, 0.25); overflow: hidden; justify-content: center; align-items: center; }
+.z-pl-view-thumb { position: absolute; left: 0; top: 0; right: 0; bottom: 0; -unity-background-scale-mode: scale-and-crop; }
+.z-pl-view-empty { color: var(--z-text-2); font-size: 11px; white-space: normal; -unity-text-align: middle-center; }
+.z-pl-view-box .z-mini-remove { position: absolute; right: 3px; top: 3px; }
+.z-pl-view-name { font-size: 11px; -unity-font-style: bold; color: var(--z-text); margin: 4px 0 2px 0; }
+.z-pl-view-button { flex-grow: 1; margin: 0 2px 0 0; }
+.z-pl-sets { margin-bottom: 6px; }
+.z-pl-set { padding: 8px 10px; margin-bottom: 8px; border-radius: 10px; background-color: rgba(255, 255, 255, 0.03); }
+.z-pl-set-title { font-size: 12px; -unity-font-style: bold; color: var(--z-text); }
+.z-pl-edge-remove { position: absolute; width: 20px; height: 20px; padding: 0; margin: 0; border-radius: 10px; border-width: 0; font-size: 10px; background-color: var(--z-raised); color: var(--z-text); -unity-text-align: middle-center; }
+.z-pl-edge-remove:hover { color: var(--z-error); background-color: var(--z-hover); }

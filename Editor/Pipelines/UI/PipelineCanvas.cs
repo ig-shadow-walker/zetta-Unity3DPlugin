@@ -79,10 +79,24 @@ namespace Zetta3D.Editor.Pipelines.UI
             focusable = true;
             style.flexGrow = 1;
 
-            SetupZoom(0.25f, 2f);
+            // NAVIGATING AS THE WEB CANVAS DOES (React Flow): drag the empty canvas to move around, Shift-drag to select
+            // several steps, the web's zoom range. Scrolling is OnWheel's: a trackpad's two fingers move the canvas, a
+            // mouse wheel, a pinch or Cmd/Ctrl + scroll zooms. The middle button (or Alt-drag) still moves it, as in Unity.
+            SetupZoom(MinZoom, MaxZoom);
             this.AddManipulator(new ContentDragger());
             this.AddManipulator(new SelectionDragger());
-            this.AddManipulator(new RectangleSelector());
+            var selector = new RectangleSelector();
+            selector.activators.Clear();
+            selector.activators.Add(new ManipulatorActivationFilter { button = MouseButton.LeftMouse, modifiers = EventModifiers.Shift });
+            selector.activators.Add(new ManipulatorActivationFilter { button = MouseButton.LeftMouse, modifiers = EventModifiers.Shift | EventModifiers.Command });
+            selector.activators.Add(new ManipulatorActivationFilter { button = MouseButton.LeftMouse, modifiers = EventModifiers.Shift | EventModifiers.Control });
+            this.AddManipulator(selector);
+            // Before GraphView's own zoomer and selectors see them.
+            RegisterCallback<WheelEvent>(OnWheel, TrickleDown.TrickleDown);
+            RegisterCallback<MouseDownEvent>(OnPanDown, TrickleDown.TrickleDown);
+            RegisterCallback<MouseMoveEvent>(OnPanMove);
+            RegisterCallback<MouseUpEvent>(OnPanUp);
+            RegisterCallback<MouseCaptureOutEvent>(_ => _panning = false);
             var grid = new GridBackground();
             grid.AddToClassList("z-pl-grid");
             Insert(0, grid);
@@ -102,6 +116,195 @@ namespace Zetta3D.Editor.Pipelines.UI
             RegisterCallback<DragUpdatedEvent>(OnDragUpdated);
             RegisterCallback<DragPerformEvent>(OnDragPerform);
             RegisterCallback<GeometryChangedEvent>(_ => FrameOnce());
+            Add(ZoomControls());
+            Add(BuildGuide());
+        }
+
+        // ─── Moving around ─────────────────────────────────────────────────────────
+
+        /// <summary>The web canvas's zoom range (minZoom / maxZoom).</summary>
+        public const float MinZoom = 0.2f;
+        public const float MaxZoom = 1.75f;
+        /// <summary>Pixels a scroll "line" moves the canvas — Unity's own ScrollView step, so it feels like the rest of the Editor.</summary>
+        const float ScrollStep = 18f;
+
+        Vector3 _viewPosition;
+        float _viewScale = 1f;
+        bool _panning;
+        bool _panMoved;
+        Vector2 _panFrom;
+        Vector3 _panStartPosition;
+        double _lastTrackpad = -1;
+
+        /// <summary>Every change of view the canvas makes goes through here, so its position and zoom are known.</summary>
+        void SetView(Vector3 position, float scale)
+        {
+            _viewScale = Mathf.Clamp(scale, MinZoom, MaxZoom);
+            _viewPosition = position;
+            UpdateViewTransform(_viewPosition, new Vector3(_viewScale, _viewScale, 1));
+        }
+
+        /// <summary>
+        /// Scrolling. A trackpad's two fingers move the canvas, any way they go; a mouse wheel zooms, as the web canvas
+        /// does; a pinch, or Cmd/Ctrl + scroll, zooms (macOS reports a pinch with Ctrl held, as browsers see it). Shift +
+        /// wheel moves sideways, for a mouse.
+        /// </summary>
+        void OnWheel(WheelEvent evt)
+        {
+            SyncView();
+            var delta = (Vector2)evt.delta;
+            var now = EditorApplication.timeSinceStartup;
+            // A trackpad sends small, smooth steps, often sideways too; a mouse wheel whole notches, straight up or down.
+            // A gesture keeps its kind for its whole length, so one notch-sized step inside a swipe does not zoom.
+            var notch = delta.x == 0 && Mathf.Abs(delta.y) >= 1 && Mathf.Abs(delta.y - Mathf.Round(delta.y)) < 0.001f;
+            var trackpad = !notch || now - _lastTrackpad < 0.35;
+            if (trackpad && !(evt.ctrlKey || evt.commandKey)) _lastTrackpad = now;
+
+            var at = this.WorldToLocal(evt.mousePosition);
+            if (evt.ctrlKey || evt.commandKey || (!trackpad && !evt.shiftKey))
+                ZoomAt(at, Mathf.Exp(-delta.y * 0.05f));
+            else if (!trackpad)
+                SetView(_viewPosition - new Vector3(delta.y * ScrollStep, 0, 0), _viewScale);
+            else
+                SetView(_viewPosition - new Vector3(delta.x * ScrollStep, delta.y * ScrollStep, 0), _viewScale);
+            evt.StopImmediatePropagation();
+        }
+
+        /// <summary>Zooms by <paramref name="factor"/> keeping the point under <paramref name="at"/> (canvas space) where it is.</summary>
+        void ZoomAt(Vector2 at, float factor)
+        {
+            var scale = Mathf.Clamp(_viewScale * factor, MinZoom, MaxZoom);
+            var ratio = scale / _viewScale;
+            var position = new Vector3(at.x - (at.x - _viewPosition.x) * ratio, at.y - (at.y - _viewPosition.y) * ratio, 0);
+            SetView(position, scale);
+        }
+
+        /// <summary>Picks up a change of view GraphView made itself (the middle-button drag, its keyboard framing).</summary>
+        void SyncView()
+        {
+            var style = contentViewContainer.resolvedStyle;
+            var scale = style.scale.value.x;
+            if (scale > 0.01f && !float.IsNaN(scale)) _viewScale = scale;
+            _viewPosition = style.translate;
+        }
+
+        bool IsEmptyCanvas(IEventHandler target) => target == this || target == contentViewContainer || target is GridBackground;
+
+        /// <summary>A drag on the empty canvas moves it (panOnDrag); a click there without moving clears the selection.</summary>
+        void OnPanDown(MouseDownEvent evt)
+        {
+            if (evt.button != 0 || evt.shiftKey || evt.altKey || evt.ctrlKey || evt.commandKey || !IsEmptyCanvas(evt.target)) return;
+            SyncView();
+            _panning = true;
+            _panMoved = false;
+            _panFrom = evt.mousePosition;
+            _panStartPosition = _viewPosition;
+            this.CaptureMouse();
+            Focus();
+            evt.StopImmediatePropagation();
+        }
+
+        void OnPanMove(MouseMoveEvent evt)
+        {
+            if (!_panning) return;
+            var moved = evt.mousePosition - _panFrom;
+            if (!_panMoved && moved.sqrMagnitude < 9) return;
+            _panMoved = true;
+            SetView(_panStartPosition + new Vector3(moved.x, moved.y, 0), _viewScale);
+            evt.StopPropagation();
+        }
+
+        void OnPanUp(MouseUpEvent evt)
+        {
+            if (!_panning || evt.button != 0) return;
+            _panning = false;
+            if (this.HasMouseCapture()) this.ReleaseMouse();
+            if (!_panMoved) ClearSelection();
+            evt.StopPropagation();
+        }
+
+        /// <summary>Zoom in, zoom out and fit, at the bottom left — the web canvas's Controls.</summary>
+        VisualElement ZoomControls()
+        {
+            var box = new VisualElement().Classes("z-pl-zoom");
+            void Make(string text, string tip, Action act)
+            {
+                var button = new Button(act) { text = text, tooltip = tip };
+                button.AddToClassList("z-pl-zoom-button");
+                box.Add(button);
+            }
+            // The middle of the canvas — or its corner, before it has a size.
+            Vector2 Centre() => float.IsNaN(layout.width) ? Vector2.zero : new Vector2(layout.width / 2, layout.height / 2);
+            Make("+", "Zoom in (or pinch, Cmd/Ctrl + scroll, or the mouse wheel)", () =>
+            {
+                SyncView();
+                ZoomAt(Centre(), 1.2f);
+            });
+            Make("−", "Zoom out", () =>
+            {
+                SyncView();
+                ZoomAt(Centre(), 1 / 1.2f);
+            });
+            Make("", "Fit every step in view", FrameGraph);
+            // A frame mark, drawn — no editor font is sure to have a glyph for it.
+            box[box.childCount - 1].Add(new VisualElement { pickingMode = PickingMode.Ignore }.Classes("z-pl-fit-icon"));
+            var help = new Button(() => ShowGuide(true)) { text = "?", tooltip = "How to move around and edit the canvas" };
+            help.AddToClassList("z-pl-zoom-button");
+            box.Add(help);
+            _guideButton = help;
+            return box;
+        }
+
+        // ─── The controls guide ────────────────────────────────────────────────────
+
+        const string GuideClosedKey = "Zetta3D.Pipelines.GuideClosed";
+        VisualElement _guide;
+        Button _guideButton;
+
+        /// <summary>
+        /// A short card beside the zoom buttons saying how the canvas is driven. Closed with ✕ it stays closed (for every
+        /// canvas, across sessions); ? under the zoom buttons opens it again. A run's canvas shows only moving around.
+        /// </summary>
+        VisualElement BuildGuide()
+        {
+            var mac = Application.platform == RuntimePlatform.OSXEditor;
+            var key = mac ? "⌘" : "Ctrl";
+            _guide = new VisualElement().Classes("z-pl-guide");
+            var head = new VisualElement().Classes("z-row");
+            head.Add(new Label("Controls").Classes("z-pl-guide-title", "z-grow"));
+            var close = new Button(() => ShowGuide(false)) { text = "✕", tooltip = "Close — ? under the zoom buttons opens it again" };
+            close.AddToClassList("z-pl-guide-close");
+            head.Add(close);
+            _guide.Add(head);
+            void Line(string what, string how)
+            {
+                var row = new VisualElement().Classes("z-row", "z-pl-guide-row");
+                row.Add(new Label(what).Classes("z-pl-guide-what"));
+                row.Add(new Label(how).Classes("z-pl-guide-how"));
+                _guide.Add(row);
+            }
+            Line("Move around", "Drag the empty canvas, or two fingers on the trackpad");
+            Line("Zoom", $"Pinch, the mouse wheel or {key} + scroll");
+            if (!_readOnly)
+            {
+                Line("Add a step", "Drag it in from the list on the left");
+                Line("Connect", "Drag from a step's output dot to another's input");
+                Line("Change a connection", "Drag either end to another dot — or off, to remove it");
+                Line("Select several", "Shift + drag");
+                Line("Remove", "Select it, then Delete (or ✕ on a connection)");
+                Line("Undo / redo", mac ? "⌘Z / ⇧⌘Z" : "Ctrl+Z / Ctrl+Y");
+            }
+            var closed = EditorPrefs.GetBool(GuideClosedKey, false);
+            _guide.Visible(!closed);
+            _guideButton?.Visible(closed);
+            return _guide;
+        }
+
+        void ShowGuide(bool show)
+        {
+            EditorPrefs.SetBool(GuideClosedKey, !show);
+            _guide?.Visible(show);
+            _guideButton?.Visible(!show);
         }
 
         // ─── Drawing the graph ─────────────────────────────────────────────────────
@@ -240,9 +443,9 @@ namespace Zetta3D.Editor.Pipelines.UI
             }
             var b = bounds.Value;
             const float pad = 48;
-            var scale = Mathf.Clamp(Mathf.Min((layout.width - 2 * pad) / b.width, (layout.height - 2 * pad) / b.height), 0.25f, 1f);
+            var scale = Mathf.Clamp(Mathf.Min((layout.width - 2 * pad) / b.width, (layout.height - 2 * pad) / b.height), MinZoom, 1f);
             var position = new Vector3(layout.width / 2 - b.center.x * scale, layout.height / 2 - b.center.y * scale, 0);
-            UpdateViewTransform(position, new Vector3(scale, scale, 1));
+            SetView(position, scale);
         }
 
         /// <summary>Frames the graph again the next time it has a size (a newly opened pipeline).</summary>

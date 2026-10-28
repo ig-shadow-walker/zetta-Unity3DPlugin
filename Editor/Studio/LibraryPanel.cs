@@ -12,7 +12,8 @@ namespace Zetta3D.Editor.Studio
     /// The user's library: every 3D generation (import, place, drag into the scene, rename, delete — one or
     /// several at once — send to a tool, fork) and, on a second tab, their 2D images. Gaussian splats made on the
     /// web are listed too, but are not supported in Unity: they only open on zetta3d.ai or get deleted.
-    /// A 3D Pipelines run's models arrive as one entry (groupRuns) and are drawn as one collapsible group row.
+    /// A 3D Pipelines run's models arrive as one entry (groupRuns) and are drawn as one tile — a deck — that opens them in
+    /// a pop-up, as the web's My Generations does.
     /// </summary>
     public class LibraryPanel : StudioPanel
     {
@@ -64,7 +65,10 @@ namespace Zetta3D.Editor.Studio
         /// <summary>The page's entries as the server sent them: a pipeline run is one entry carrying its models.</summary>
         readonly List<Generation> _items = new List<Generation>();
         /// <summary>Which run groups are open; kept across reloads.</summary>
-        readonly HashSet<long> _openRuns = new HashSet<long>();
+        /// <summary>The run open in its pop-up, and the pop-up's grid — rebuilt when the library is.</summary>
+        Pipelines.UI.PipelineOverlay _runPopup;
+        VisualElement _runPopupGrid;
+        long _runPopupId;
         (int done, int total)? _deleting;
         /// <summary>Imports under way (generation id → progress 0–1); outlives a redraw of the grid.</summary>
         static readonly Dictionary<long, float> Importing = new Dictionary<long, float>();
@@ -259,12 +263,13 @@ namespace Zetta3D.Editor.Studio
             if (_grid == null || !_loaded) return;
             _bars.Clear();
             _grid.Clear();
-            foreach (var row in _items) _grid.Add(row.RunGroup != null && row.RunGroup.Members.Count > 0 ? RunGroupRow(row.RunGroup) : Tile(row));
+            foreach (var row in _items) _grid.Add(row.RunGroup != null && row.RunGroup.Members.Count > 0 ? RunGroupTile(row.RunGroup) : Tile(row));
             if (_items.Count == 0)
                 _grid.Add(ZettaUI.Hint(string.IsNullOrEmpty(_search.Value) && _feature == "" && _statusFilter.Value == "all"
                     ? "Models you generate appear here."
                     : "Nothing matches those filters."));
             SyncSelection();
+            RefreshRunPopup();
         }
 
         // ─── Tiles ───────────────────────────────────────────────────────────────────
@@ -473,85 +478,161 @@ namespace Zetta3D.Editor.Studio
         // ─── Pipeline run groups ─────────────────────────────────────────────────────
 
         /// <summary>
-        /// A pipeline run's models, together: one row — fanned thumbnails, the run's name, "N models · pipeline ·
-        /// run #id", the Pipeline tag and a way to the run — that opens in place to show each model on its usual
-        /// tile, in the order the run made them, each with its step.
+        /// A PIPELINE RUN'S MODELS, AS ONE TILE (run-group.tsx RunGroupTile): a deck — the run's cover on the top card,
+        /// two more fanned behind it, the model count, "Still making" while it runs, its name and the Pipeline tag.
+        /// Pressed, the run opens in a pop-up with each model on its usual tile, in the order the run made them. While
+        /// selecting, pressing it takes all of the run's models instead.
         /// </summary>
-        VisualElement RunGroupRow(RunGroup group)
+        VisualElement RunGroupTile(RunGroup group)
         {
             var (name, detail) = RunGroups.Name(group);
+            var count = RunGroups.Count(group);
             var running = group.Members.Any(m => m.IsRunning);
-            var box = new VisualElement().Classes("z-run");
-            box.userData = group;
+            var deck = new VisualElement().Classes("z-run");
+            deck.userData = group;
+            deck.tooltip = $"Pipeline run: {name} — {detail}";
 
-            var header = new VisualElement().Classes("z-run-header");
-            header.Add(new Label("▸").Classes("z-run-chevron"));
+            // The cards behind, turned a few degrees from their bottom-left corner like a held hand of cards.
+            var behind = Math.Min(count - 1, 2);
+            for (var depth = behind; depth >= 1; depth--)
+            {
+                var back = new VisualElement().Classes("z-run-back", depth == 1 ? "z-run-back--near" : "z-run-back--far");
+                back.pickingMode = PickingMode.Ignore;
+                back.style.transformOrigin = new TransformOrigin(Length.Percent(0), Length.Percent(100));
+                back.style.rotate = new Rotate(new Angle(depth * 2f, AngleUnit.Degree));
+                deck.Add(back);
+            }
 
-            // Up to three of the run's pictures, fanned; the first drawn last so it sits on top.
-            var shown = group.Members.Take(3).ToList();
+            // In exactly one tile's cell, top and bottom level with its row; the cards behind fan out into the 12px it leaves.
+            var card = new VisualElement().Classes("z-tile", "z-run-card");
+            var cover = new VisualElement().Classes("z-tile-image");
+            var shown = group.Members.FirstOrDefault(m => !string.IsNullOrEmpty(m.ThumbnailUrl)) ?? group.Members.FirstOrDefault();
+            if (shown != null) ZettaUI.LoadInto(cover, shown.ThumbnailUrl, "gen-" + shown.Id);
+            // The model count on a little stack of cards (the web's Layers mark), drawn — no font has to have a glyph for it.
+            var badge = new VisualElement().Classes("z-run-count");
+            badge.tooltip = count == 1 ? "1 model" : $"{count} models";
+            var layers = new VisualElement().Classes("z-layers-icon");
+            layers.Add(new VisualElement().Classes("z-layers-back"));
+            layers.Add(new VisualElement().Classes("z-layers-front"));
+            badge.Add(layers);
+            badge.Add(new Label(count.ToString()).Classes("z-run-count-text"));
+            cover.Add(badge);
+            if (running) cover.Add(new Label("Still making").Classes("z-run-making"));
+            cover.Add(ZettaUI.Chip("Selected", "signal").Classes("z-tile-check", "z-run-check").Visible(false));
+            card.Add(cover);
+            card.Add(new Label(name).Classes("z-tile-title", "z-run-name"));
+            var tags = new VisualElement().Classes("z-row", "z-run-tags");
+            tags.Add(PipelineChip(group.RunId));
+            tags.Add(ZettaUI.Hint(count == 1 ? "1 model" : $"{count} models"));
+            card.Add(tags);
+            // At the bottom, where every tile has its actions: the run's own menu — Delete all among them.
+            card.Add(new VisualElement { style = { flexGrow = 1 } });
+            var actions = new VisualElement().Classes("z-row", "z-tile-actions");
+            actions.Add(ZettaUI.Spacer());
+            var more = ZettaUI.Button("⋯", () => RunMenu(group, name), "z-button--small", "z-button--ghost");
+            more.tooltip = "Actions for the whole run — import all, open the run, delete all";
+            actions.Add(more);
+            card.Add(actions);
+            deck.Add(card);
+
+            card.RegisterCallback<ClickEvent>(e =>
+            {
+                if (_deleting != null || e.target is Button) return;
+                if (_picking) PickRun(group);
+                else ShowRun(group);
+            });
+            card.RegisterCallback<ContextClickEvent>(_ => RunMenu(group, name));
+            return deck;
+        }
+
+        /// <summary>
+        /// A run's models in a pop-up (run-group.tsx RunDialog): its pictures fanned, its name and "N models · pipeline ·
+        /// run #id", each model on its usual tile with its step ("Step 2 · Retopology"), and the run's own actions.
+        /// </summary>
+        void ShowRun(RunGroup group)
+        {
+            _runPopup?.Close();
+            var (name, detail) = RunGroups.Name(group);
+            var popup = new Pipelines.UI.PipelineOverlay(name, detail, true);
+            popup.AddToClassList("z-run-popup");
+
+            var head = new VisualElement().Classes("z-row", "z-run-popup-head");
             var thumbs = new VisualElement().Classes("z-run-thumbs");
-            thumbs.style.width = 40 + Math.Max(0, shown.Count - 1) * 8;
-            for (var i = shown.Count - 1; i >= 0; i--)
+            var fanned = group.Members.Take(3).ToList();
+            thumbs.style.width = 40 + Math.Max(0, fanned.Count - 1) * 8;
+            for (var i = fanned.Count - 1; i >= 0; i--)
             {
                 var thumb = new VisualElement().Classes("z-run-thumb");
                 thumb.style.left = i * 8;
-                ZettaUI.LoadInto(thumb, shown[i].ThumbnailUrl, "gen-" + shown[i].Id);
+                ZettaUI.LoadInto(thumb, fanned[i].ThumbnailUrl, "gen-" + fanned[i].Id);
                 thumbs.Add(thumb);
             }
-            header.Add(thumbs);
+            head.Add(thumbs);
+            head.Add(PipelineChip(group.RunId));
+            popup.Body.Add(head);
 
-            var text = new VisualElement().Classes("z-run-text");
-            text.Add(new Label(name).Classes("z-run-name"));
-            text.Add(new Label(running ? $"Still making · {detail}" : detail).Classes("z-run-detail"));
-            header.Add(text);
-            header.Add(ZettaUI.Chip("Selected", "signal").Classes("z-run-check").Visible(false));
-            header.Add(PipelineChip(group.RunId));
+            _runPopupGrid = new VisualElement().Classes("z-grid", "z-run-members");
+            popup.Body.Add(_runPopupGrid);
 
+            var importable = group.Members.Any(m => m.IsSuccess && !m.IsSplat);
+            if (importable)
+            {
+                var import = ZettaUI.Button("Import all", () => _ = ImportRun(CurrentGroup(group)), "z-button--small");
+                import.tooltip = "Import every finished model this run made into the project, first step first";
+                popup.Footer.Add(import);
+            }
+            var delete = ZettaUI.Button("Delete all", () =>
+            {
+                var current = CurrentGroup(group);
+                popup.Close();
+                _ = DeleteRun(current, name);
+            }, "z-button--small", "z-button--ghost", "z-button--danger");
+            delete.tooltip = $"Delete every model run #{group.RunId} made — the run itself stays in 3D Pipelines";
+            popup.Footer.Add(delete);
+            popup.Footer.Add(ZettaUI.Spacer());
             if (group.PipelineId is { } pipelineId)
             {
-                var open = ZettaUI.Button("Open run", () => ZettaStudioHooks.OpenRun(pipelineId, group.RunId), "z-button--small", "z-button--ghost");
-                open.tooltip = $"Open run #{group.RunId} in 3D Pipelines";
-                header.Add(open);
-            }
-            var more = ZettaUI.Button("⋯", null, "z-button--small", "z-button--ghost");
-            more.tooltip = "Actions for the whole run";
-            more.clicked += () => RunMenu(group, name);
-            header.Add(more);
-            header.tooltip = $"Pipeline run: {name} — {detail}";
-
-            // A click on the header (not on one of its buttons) opens or closes the run — or, while selecting, picks all of it.
-            header.RegisterCallback<ClickEvent>(e =>
-            {
-                if (e.target is Button || _deleting != null) return;
-                if (_picking)
+                var open = ZettaUI.Button("Open run", () =>
                 {
-                    PickRun(group);
-                    return;
-                }
-                if (!_openRuns.Remove(group.RunId)) _openRuns.Add(group.RunId);
-                OpenRunBody(box, group, _openRuns.Contains(group.RunId));
-            });
-            box.Add(header);
-            OpenRunBody(box, group, _openRuns.Contains(group.RunId) || _picking);
-            return box;
+                    popup.Close();
+                    ZettaStudioHooks.OpenRun(pipelineId, group.RunId);
+                }, "z-button--small", "z-button--ghost");
+                open.tooltip = $"Open run #{group.RunId} in 3D Pipelines";
+                popup.Footer.Add(open);
+            }
+            popup.Footer.Add(ZettaUI.Button("Close", popup.Close, "z-button--small"));
+
+            _runPopup = popup;
+            _runPopupId = group.RunId;
+            popup.Closed += () =>
+            {
+                if (_runPopup != popup) return;
+                _runPopup = null;
+                _runPopupGrid = null;
+            };
+            FillRun(group);
+            popup.ShowIn(Ctx?.Window?.Window?.rootVisualElement ?? Root);
         }
 
-        /// <summary>Shows or hides a run's models; their tiles are built the first time it opens.</summary>
-        void OpenRunBody(VisualElement box, RunGroup group, bool open)
+        /// <summary>The run as the library holds it now (after a refresh), or the one given.</summary>
+        RunGroup CurrentGroup(RunGroup group) =>
+            _items.Select(i => i.RunGroup).FirstOrDefault(g => g != null && g.RunId == group.RunId) ?? group;
+
+        void FillRun(RunGroup group)
         {
-            var chevron = box.Q<Label>(className: "z-run-chevron");
-            if (chevron != null) chevron.text = open ? "▾" : "▸";
-            var body = box.Q<VisualElement>(className: "z-run-members");
-            if (open && body == null)
-            {
-                body = new VisualElement().Classes("z-grid", "z-run-members");
-                var ordered = RunGroups.InRunOrder(group.Members);
-                for (var i = 0; i < ordered.Count; i++) body.Add(Tile(ordered[i], group, RunGroups.StepText(ordered[i], i)));
-                box.Add(body);
-                // New tiles take the current picks.
-                if (_picking) _grid.schedule.Execute(() => SyncSelection());
-            }
-            body?.Visible(open);
+            if (_runPopupGrid == null) return;
+            _runPopupGrid.Clear();
+            var ordered = RunGroups.InRunOrder(group.Members);
+            for (var i = 0; i < ordered.Count; i++) _runPopupGrid.Add(Tile(ordered[i], group, RunGroups.StepText(ordered[i], i)));
+        }
+
+        /// <summary>The library was drawn again: the open pop-up shows the run as it is now — or closes, when it is gone.</summary>
+        void RefreshRunPopup()
+        {
+            if (_runPopup == null) return;
+            var group = _items.Select(i => i.RunGroup).FirstOrDefault(g => g != null && g.RunId == _runPopupId);
+            if (group == null || group.Members.Count == 0) _runPopup.Close();
+            else FillRun(group);
         }
 
         void RunMenu(RunGroup group, string name)
@@ -851,11 +932,10 @@ namespace Zetta3D.Editor.Studio
             foreach (var run in _grid.Query<VisualElement>(className: "z-run").ToList())
             {
                 if (run.userData is not RunGroup group) continue;
+                // While selecting, a run's deck takes all of its models (run-group.tsx): ticked when every one is picked.
                 var all = _picking && group.Members.Count > 0 && group.Members.All(m => _picked.Contains(m.Id));
-                run.EnableInClassList("z-run--picked", all);
+                run.Q(className: "z-run-card")?.EnableInClassList("z-tile--picked", all);
                 run.Q<Label>(className: "z-run-check")?.Visible(all);
-                // Picking shows a run's models, so each can be ticked on its own too.
-                OpenRunBody(run, group, _picking || _openRuns.Contains(group.RunId));
             }
         }
 

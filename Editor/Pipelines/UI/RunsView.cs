@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Zetta3D.Editor.Pipelines.UI
@@ -138,9 +139,55 @@ namespace Zetta3D.Editor.Pipelines.UI
                 text.Add(new Label($"#{run.Id} · {Progress(run)} · {PipelineUi.WhenRun(run.CreatedAt)}").Classes("z-pl-run-detail"));
                 row.Add(text);
                 row.Add(PipelineUi.RunPill(run.Status));
+                // The run's own menu, next to it in the list — Delete run (run-row-menu.tsx). The bar under an open run
+                // keeps its Delete run too.
+                var listed = run;
+                var more = ZettaUI.Button("⋯", () => RowMenu(listed), "z-button--small", "z-button--ghost", "z-pl-run-more");
+                more.tooltip = $"More for {(string.IsNullOrEmpty(run.Seed?.Name) ? $"Run #{run.Id}" : run.Seed.Name)}";
+                row.Add(more);
                 var id = run.Id;
-                row.RegisterCallback<ClickEvent>(_ => OpenRun(id));
+                row.RegisterCallback<ClickEvent>(e =>
+                {
+                    if (e.target is Button) return;
+                    OpenRun(id);
+                });
                 _list.Add(row);
+            }
+        }
+
+        /// <summary>Whether a run may be deleted: one that is over, or a draft that never started — never one still going.</summary>
+        public static bool Deletable(string status) =>
+            status is RunStatuses.Done or RunStatuses.Failed or RunStatuses.Cancelled or RunStatuses.Draft;
+
+        void RowMenu(RunSummary run)
+        {
+            var draft = run.Status == RunStatuses.Draft;
+            var label = draft ? "Discard run" : "Delete run";
+            var menu = new GenericMenu();
+            if (Deletable(run.Status)) menu.AddItem(new GUIContent(label + "…"), false, () => _ = DeleteFromList(run));
+            else menu.AddDisabledItem(new GUIContent(label + " — still going, cancel it first"));
+            menu.ShowAsContext();
+        }
+
+        /// <summary>Delete run, from the list: asked first (as the web's alert), then gone — and closed, when it was open.</summary>
+        async Task DeleteFromList(RunSummary run)
+        {
+            var draft = run.Status == RunStatuses.Draft;
+            var name = string.IsNullOrEmpty(run.Seed?.Name) ? $"Run #{run.Id}" : run.Seed.Name;
+            if (!EditorUtility.DisplayDialog($"{(draft ? "Discard" : "Delete")} run #{run.Id}?",
+                    draft ? $"“{name}” never started — it goes, and nothing was spent." : $"“{name}” and its steps go. The models it made stay in your library.",
+                    draft ? "Discard" : "Delete", "Cancel"))
+                return;
+            try
+            {
+                await PipelinesApi.DeleteRunAsync(run.Id);
+                RunFollower.Unfollow(run.Id);
+                if (_panel?.RunId == run.Id) OpenRun(null);
+                await _editor.RefreshRunsAsync();
+            }
+            catch (ZettaApiException e)
+            {
+                _editor.Toast(ZettaCatalog.Explain(e));
             }
         }
 

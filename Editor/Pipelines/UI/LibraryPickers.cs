@@ -72,6 +72,12 @@ namespace Zetta3D.Editor.Pipelines.UI
     /// <summary>"From your images" and "From your library" (image-picker.tsx, model-picker.tsx), paged, as overlays.</summary>
     public static class LibraryPickers
     {
+        /// <summary>
+        /// "Selected" on a picked tile — shown by the tile's own class, so it is there while the pointer is still over the
+        /// tile (the hover colour alone hid the pick until the pointer moved away).
+        /// </summary>
+        static Label PickedChip() => (Label)ZettaUI.Chip("Selected", "signal").Classes("z-tile-check", "z-pick-check");
+
         const int PageSize = 24;
 
         /// <summary>
@@ -116,6 +122,7 @@ namespace Zetta3D.Editor.Pipelines.UI
                         var tile = new VisualElement().Classes("z-tile", "z-tile--compact");
                         var image = PipelineUi.Thumb(picked.Url, "z-tile-image");
                         tile.Add(image);
+                        tile.Add(PickedChip());
                         tile.tooltip = picked.Prompt ?? "";
                         tile.EnableInClassList("z-tile--picked", chosen.Contains(item.Id));
                         tile.RegisterCallback<ClickEvent>(async _ =>
@@ -203,6 +210,7 @@ namespace Zetta3D.Editor.Pipelines.UI
                         ZettaUI.LoadInto(image, item.ThumbnailUrl, "gen-" + item.Id);
                         tile.Add(image);
                         tile.Add(new Label(item.DisplayTitle).Classes("z-tile-title"));
+                        tile.Add(PickedChip());
                         tile.EnableInClassList("z-tile--picked", chosen.Contains(item.Id));
                         var row = item;
                         tile.RegisterCallback<ClickEvent>(_ => tile.EnableInClassList("z-tile--picked", onPick(row)));

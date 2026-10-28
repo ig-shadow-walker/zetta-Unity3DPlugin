@@ -1,5 +1,25 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- Pipelines: the canvas moves like the web's. Drag the empty canvas, or scroll with two fingers on a trackpad, to move
+  around; a pinch, the mouse wheel or Cmd/Ctrl + scroll zooms (0.2× to 1.75×), and **+ − ⤢** at the bottom left zoom
+  and fit every step in view. Shift-drag selects several steps; a click on the empty canvas clears the selection.
+- Pipelines: a short **Controls** guide at the bottom left of the canvas — close it with ✕; **?** under the zoom
+  buttons brings it back.
+
+- My Generations: a pipeline run is one tile in the grid, as on the web — its cover with two cards fanned behind, the
+  model count, "Still making" while it runs, and the Pipeline tag, in a tile's own place in the grid. Its ⋯ menu has
+  Import all, Open run and Delete all. It opens in a pop-up with each model on its usual tile, step by step, and
+  Import all, Delete all and Open run. While selecting, it takes all of the run's models.
+
+- Pipelines: each run in the Runs list has a ⋯ menu with **Delete run** (**Discard run** for one that never started)
+  — asked first, and not offered while the run is still going. The **Delete run** under an open run stays.
+
+### Fixed
+- Choosing pictures or models: a picked tile now shows **Selected** at once, even while the pointer is still over it.
+
 ## [0.7.0] - 2026-10-29
 
 ### Added

@@ -150,7 +150,8 @@ The **My Generations** tab — everything you've made on Zetta 3D, on the web or
 - **Import** a model with a progress bar, or **drag it** straight into the Scene view or the Hierarchy.
 - Models already in your project are marked **In project**, with **Show** and **Place** buttons.
 - **Send to a tool** (texture it, rig it…), or **Fork** a generation's settings back into Generate.
-- Search, filter, bulk delete, and see pipeline runs grouped by run.
+- Search, filter and bulk delete. A pipeline run shows as one tile — a small deck of its models — that opens them
+  in a pop-up, in the order the run made them, with **Import all**, **Delete all** and **Open run**.
 
 Gaussian splats and worlds made on zetta3d.ai are listed too, but Unity can't use them; they open on the web.
 
@@ -168,6 +169,9 @@ pipelines as on [zetta3d.ai/pipelines](https://zetta3d.ai/pipelines).
   part), Generate 3D or Smart 3D — from one picture, or their **Multi-view** steps from pictures of each side —
   Retopology, Segmentation, AI texturing (from a picture or a description) or **Multi-view - AI texturing** (from
   pictures of each side — wire in a Multi-view seed or Draw views, or give them on each run), Smart UV and Auto rig.
+- Move around as on the web: drag the empty canvas, or scroll with two fingers on a trackpad; zoom with a pinch, the
+  mouse wheel, Cmd/Ctrl + scroll or the **+ − ⤢** buttons (bottom left). **Shift**-drag selects several steps. The
+  **Controls** card beside them sums this up; close it with ✕, and **?** brings it back.
 - The canvas checks every step as you build, saves on its own, and has undo and redo. Click a connection to select
   it — **✕** or **Delete** removes it — and drag either end to another socket to move it, or off onto the canvas to
   remove it. A connection that can't be made says why.

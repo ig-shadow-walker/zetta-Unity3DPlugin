@@ -351,22 +351,37 @@
 /* Library: select mode */
 .z-selection-bar { margin-top: 6px; padding: 4px 6px; border-radius: 9px; background-color: var(--z-card); }
 .z-tile--picked { background-color: var(--z-signal-wash); }
+/* Picked stays visible under the pointer: hover alone (more specific than a class) used to paint over it. */
+.z-tile--picked:hover { background-color: rgba(22, 119, 255, 0.24); }
+.z-pick-check { display: none; }
+.z-tile--picked .z-pick-check { display: flex; }
 .z-tile-check { position: absolute; left: 4px; top: 4px; }
 
 /* ── Library parity, 2026-10-19 (pipeline runs, fork, polygon count) ── */
 
 /* A pipeline run's models, as one collapsible row */
-.z-run { width: 100%; flex-shrink: 1; margin: 4px; border-radius: 12px; border-width: 1px; border-color: var(--z-border); background-color: var(--z-raised); }
-.z-run--picked { background-color: var(--z-signal-wash); }
-.z-run-header { flex-direction: row; align-items: center; padding: 4px 6px; }
-.z-run-header:hover { background-color: var(--z-hover); border-radius: 11px; }
-.z-run-chevron { width: 14px; color: var(--z-text-2); -unity-text-align: middle-center; flex-shrink: 0; }
-.z-run-thumbs { height: 40px; margin: 0 8px 0 4px; flex-shrink: 0; }
+/* A pipeline run in the grid: a deck — its cover on the top card, two cards fanned behind (run-group.tsx). */
+.z-run { width: 150px; margin: 4px; }
+/* The deck takes exactly one tile's cell, so rows and columns line up; the top card leaves 12px on its right for the fan. */
+.z-run-back { position: absolute; left: 0; top: 0; right: 12px; bottom: 0; border-radius: 12px; border-width: 1px; border-color: var(--z-border-strong); }
+.z-run-back--near { background-color: var(--z-hover); opacity: 0.95; }
+.z-run-back--far { background-color: var(--z-card); opacity: 0.7; }
+.z-run-card { margin: 0 12px 0 0; flex-grow: 1; width: auto; }
+.z-run-card .z-tile-image { overflow: hidden; }
+.z-run-count { position: absolute; right: 6px; top: 6px; flex-direction: row; align-items: center; padding: 2px 6px; border-radius: 9px; background-color: rgba(0, 0, 0, 0.6); }
+.z-run-count-text { color: var(--z-text); font-size: 10px; -unity-font-style: bold; margin: 0 0 0 4px; padding: 0; }
+.z-layers-icon { width: 11px; height: 10px; }
+.z-layers-back { position: absolute; left: 3px; top: 0; width: 8px; height: 7px; border-radius: 2px; border-width: 1px; border-color: rgba(250, 248, 244, 0.6); }
+.z-layers-front { position: absolute; left: 0; top: 3px; width: 8px; height: 7px; border-radius: 2px; border-width: 1px; border-color: var(--z-text); background-color: rgba(0, 0, 0, 0.6); }
+.z-run-making { position: absolute; left: 0; right: 0; bottom: 0; padding: 2px 6px; background-color: rgba(0, 0, 0, 0.6); color: var(--z-text); font-size: 10px; }
+.z-run-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.z-run-tags { align-items: center; margin-top: 3px; }
+.z-run-tags .z-hint { margin-left: 6px; }
+/* Its pop-up: the run's pictures fanned, then each model on its usual tile. */
+.z-run-popup-head { align-items: center; margin-bottom: 8px; }
+.z-run-thumbs { height: 40px; margin: 0 8px 0 0; flex-shrink: 0; }
 .z-run-thumb { position: absolute; top: 0; width: 40px; height: 40px; border-radius: 8px; border-width: 1px; border-color: var(--z-border-strong); background-color: var(--z-card); -unity-background-scale-mode: scale-and-crop; }
-.z-run-text { flex-grow: 1; flex-shrink: 1; min-width: 60px; }
-.z-run-name { -unity-font-style: bold; color: var(--z-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.z-run-detail { color: var(--z-text-2); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.z-run-members { margin: 0 6px 6px 18px; padding-left: 4px; border-left-width: 1px; border-left-color: var(--z-border); }
+.z-run-members { margin: 0; }
 .z-step-chip { -unity-font-style: bold; font-size: 10px; color: var(--z-text); background-color: rgba(255, 255, 255, 0.1); }
 .z-pipeline-chip { font-size: 10px; -unity-font-style: bold; }
 
@@ -843,3 +858,20 @@
 .z-pl-set-title { font-size: 12px; -unity-font-style: bold; color: var(--z-text); }
 .z-pl-edge-remove { position: absolute; width: 20px; height: 20px; padding: 0; margin: 0; border-radius: 10px; border-width: 0; font-size: 10px; background-color: var(--z-raised); color: var(--z-text); -unity-text-align: middle-center; }
 .z-pl-edge-remove:hover { color: var(--z-error); background-color: var(--z-hover); }
+
+/* The pipeline canvas's zoom controls, bottom left (the web canvas's Controls). */
+.z-pl-zoom { position: absolute; left: 10px; bottom: 10px; flex-direction: column; border-radius: 8px; background-color: var(--z-raised); overflow: hidden; }
+.z-pl-zoom-button { width: 28px; height: 26px; margin: 0; padding: 0; border-width: 0; border-radius: 0; background-color: rgba(0, 0, 0, 0); color: var(--z-text); font-size: 14px; -unity-text-align: middle-center; }
+.z-pl-zoom-button:hover { background-color: var(--z-hover); }
+.z-pl-zoom-button { align-items: center; justify-content: center; }
+.z-pl-fit-icon { width: 11px; height: 11px; border-radius: 2px; border-width: 1.5px; border-color: var(--z-text); }
+
+/* The canvas's controls guide, beside the zoom buttons. */
+.z-pl-guide { position: absolute; left: 46px; bottom: 10px; width: 330px; padding: 8px 10px 6px 10px; border-radius: 10px; background-color: var(--z-raised); }
+.z-pl-guide-title { font-size: 11px; -unity-font-style: bold; color: var(--z-text); }
+.z-pl-guide-close { width: 18px; height: 18px; margin: 0; padding: 0; border-width: 0; border-radius: 9px; background-color: rgba(0, 0, 0, 0); color: var(--z-text-2); font-size: 10px; -unity-text-align: middle-center; }
+.z-pl-guide-close:hover { background-color: var(--z-hover); color: var(--z-text); }
+.z-pl-guide-row { align-items: flex-start; margin-top: 3px; }
+.z-pl-guide-what { width: 118px; flex-shrink: 0; font-size: 10px; color: var(--z-text); margin: 0; padding: 0; }
+.z-pl-guide-how { flex-shrink: 1; flex-grow: 1; font-size: 10px; color: var(--z-text-2); white-space: normal; margin: 0; padding: 0; }
+.z-pl-run-more { margin: 0 0 0 4px; }

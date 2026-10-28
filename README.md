@@ -81,7 +81,7 @@ GLBs) and Newtonsoft JSON. When it finishes, the **Zetta 3D** window opens on it
 "com.zetta3d.unity": "https://github.com/ig-shadow-walker/zetta-Unity3DPlugin.git"
 ```
 
-**Pin a version.** Add a release tag to the URL, for example `…/zetta-Unity3DPlugin.git#v0.6.0`. Pinning is
+**Pin a version.** Add a release tag to the URL, for example `…/zetta-Unity3DPlugin.git#v0.7.0`. Pinning is
 better for a team, so everyone gets the same build; change the tag to move to a newer release.
 
 **Update.** Unity keeps the version it installed until you ask for a newer one: add the package again from the

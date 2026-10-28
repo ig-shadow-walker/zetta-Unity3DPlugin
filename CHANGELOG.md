@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.7.0] - 2026-10-29
 
 ### Added
 - Agent: **undo what it changed.** When a message is done, a card under the reply lists every script and asset it

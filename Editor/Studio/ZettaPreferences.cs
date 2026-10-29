@@ -145,7 +145,48 @@ namespace Zetta3D.Editor.Studio
             RenderStatus();
             scroll.Add(connection);
 
-            scroll.Add(ZettaUI.Hint($"Zetta 3D for Unity {ZettaConfig.Version}").Classes("z-pad"));
+            scroll.Add(VersionCard(host));
+        }
+
+        /// <summary>The version installed, whether a newer one is out, and Check for updates / Update.</summary>
+        static VisualElement VersionCard(VisualElement host)
+        {
+            var card = ZettaUI.Card(ZettaUI.Title("Version"));
+            var status = ZettaUI.Hint("");
+            var check = ZettaUI.Button("Check for updates", null, "z-button--small");
+            var update = ZettaUI.Button("Update", ZettaUpdates.Install, "z-button--small", "z-button--signal");
+            var notes = ZettaUI.Button("What's new", () => Application.OpenURL(ZettaUpdates.Known?.NotesUrl ?? ZettaUpdates.ReleasesUrl), "z-button--small", "z-button--ghost");
+            var checking = false;
+
+            void Render()
+            {
+                var known = ZettaUpdates.Known;
+                status.text = $"Zetta 3D for Unity {ZettaConfig.Version} — " + (
+                    checking ? "checking…" :
+                    ZettaUpdates.Installing ? $"updating to {known?.Latest}…" :
+                    ZettaUpdates.Problem ?? (known == null ? "not checked yet." :
+                    known.Required ? $"{known.Latest} is out, and this version must be updated." :
+                    known.Available ? $"{known.Latest} is out." : "the latest version."));
+                status.EnableInClassList("z-error", known?.Required == true || ZettaUpdates.Problem != null);
+                check.SetEnabled(!checking && !ZettaUpdates.Installing);
+                update.Visible(known?.Available == true && !ZettaUpdates.Installing);
+                notes.Visible(known?.Available == true);
+            }
+
+            check.clicked += async () =>
+            {
+                checking = true;
+                Render();
+                var found = await ZettaUpdates.CheckAsync();
+                checking = false;
+                Render();
+                if (found == null) status.text = $"Zetta 3D for Unity {ZettaConfig.Version} — couldn't check: Zetta 3D and GitHub didn't answer.";
+            };
+            card.Add(status);
+            card.Add(ZettaUI.Row(check, update, notes).Classes("z-row--wrap"));
+            ZettaUI.WhileOnScreen(host, h => ZettaUpdates.Changed += h, h => ZettaUpdates.Changed -= h, Render);
+            Render();
+            return card;
         }
 
         // ─── Zetta Agent: Zetta account or the user's own API keys ───

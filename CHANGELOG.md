@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **Update notifications.** The plugin checks once a day for a newer release. When one is out, a line under the
+  window's header says so, with **What's new**, **Update** and **✕**. **Update** installs it through the Package
+  Manager, and a URL pinned to a release tag has its tag moved. **✕** hides the line until the next release.
+- An update can be marked as required, when an older version no longer works with Zetta 3D. Its line is red, and **✕**
+  only hides it until Unity restarts.
+- **Window › Zetta 3D › Check for Updates…**, and a **Version** section in Preferences › Zetta 3D with
+  **Check for updates**.
+
 ## [0.7.1] - 2026-10-29
 
 ### Changed

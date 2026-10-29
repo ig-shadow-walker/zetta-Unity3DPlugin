@@ -249,6 +249,11 @@
 .z-panel-host { flex-grow: 1; flex-shrink: 1; }
 .z-panel { flex-grow: 1; }
 .z-intro { margin-bottom: 8px; font-size: 12px; }
+/* The update line under the header: blue for a new release, red for a required one. */
+.z-update { flex-direction: row; align-items: center; flex-shrink: 0; padding: 3px 6px 3px 12px; background-color: var(--z-signal-wash); border-bottom-width: 1px; border-bottom-color: var(--z-border); }
+.z-update--required { background-color: rgba(228, 117, 107, 0.14); }
+.z-update-text { white-space: normal; font-size: 11px; color: var(--z-text); margin-right: 6px; }
+.z-update--required .z-update-text { color: var(--z-error); }
 .z-banner { padding: 6px 12px; background-color: rgba(224, 173, 106, 0.12); color: var(--z-amber); white-space: normal; font-size: 11px; }
 .z-lock { padding: 8px 10px; margin-bottom: 8px; border-radius: 10px; background-color: var(--z-signal-wash); color: var(--z-signal-text); white-space: normal; }
 .z-hint--warn { color: var(--z-amber); }

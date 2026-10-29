@@ -84,9 +84,12 @@ GLBs) and Newtonsoft JSON. When it finishes, the **Zetta 3D** window opens on it
 **Pin a version.** Add a release tag to the URL, for example `…/zetta-Unity3DPlugin.git#v0.7.1`. Pinning is
 better for a team, so everyone gets the same build; change the tag to move to a newer release.
 
-**Update.** Unity keeps the version it installed until you ask for a newer one: add the package again from the
-same Git URL, or delete the `com.zetta3d.unity` entry from `Packages/packages-lock.json`. The
-[changelog](CHANGELOG.md) lists what each version adds.
+**Update.** From 0.7.2, the plugin checks once a day for a newer release. When one is out, a line under the
+Zetta 3D window's header says so, with **What's new**, **Update** (installs it through the Package Manager) and
+**✕**. You can also check any time from **Window › Zetta 3D › Check for Updates…** or **Preferences › Zetta 3D ›
+Version**. If a pinned URL has a release tag, Update moves the tag to the new release. Older versions update by
+hand: add the package again from the same Git URL, or delete the `com.zetta3d.unity` entry from
+`Packages/packages-lock.json`. The [changelog](CHANGELOG.md) lists what each version adds.
 
 **Remove.** Package Manager › **Zetta 3D** › **Remove**. Models you imported stay in your project.
 

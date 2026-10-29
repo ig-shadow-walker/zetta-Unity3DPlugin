@@ -94,6 +94,7 @@ namespace Zetta3D.Editor
 
         void OnFocus()
         {
+            ZettaUpdates.CheckIfDue();
             foreach (var page in Pages) page?.OnWindowFocus();
         }
 
@@ -103,6 +104,7 @@ namespace Zetta3D.Editor
             _header = ZettaUI.Header(ShowPage);
             ShowAgentActivity(_header);
             root.Add(_header);
+            root.Add(new ZettaUpdateBanner());
             root.Add(ZettaUI.Gate(BuildPages));
             ZettaUI.SetActiveNav(_header, Page);
             // Escape stops the agent, whatever it is doing — the same as its Stop button.

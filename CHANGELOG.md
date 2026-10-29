@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Agent: **GLM** (Z.ai) joins the providers you can run the agent on with your own API key: GLM-5.3, GLM-5.3 Flash
+  and FlashX (which see pictures), GLM-5.2 and older GLM models. Use a Standard API Key from Z.ai; a GLM Coding Plan
+  key doesn't work here.
+
+### Changed
+- Preferences › Zetta 3D: what the agent runs on is now two cards to click, **Zetta account** and **Your own API
+  key**, instead of a drop-down. The own-key card names every provider and ticks the ones with a saved key.
+
 ## [0.7.2] - 2026-10-29
 
 ### Added

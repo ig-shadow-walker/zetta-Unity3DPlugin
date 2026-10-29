@@ -16,7 +16,7 @@ namespace Zetta3D.Editor.Studio
             new SettingsProvider("Preferences/Zetta 3D", SettingsScope.User)
             {
                 label = "Zetta 3D",
-                keywords = new HashSet<string> { "Zetta", "3D", "account", "sign in", "API", "API key", "OpenAI", "Claude", "Gemini", "DeepSeek", "models folder", "images folder", "glb", "fbx" },
+                keywords = new HashSet<string> { "Zetta", "3D", "account", "sign in", "API", "API key", "OpenAI", "Claude", "Gemini", "DeepSeek", "GLM", "Z.ai", "models folder", "images folder", "glb", "fbx" },
                 activateHandler = (_, root) => Build(root),
             };
 
@@ -197,13 +197,15 @@ namespace Zetta3D.Editor.Studio
         /// </summary>
         static VisualElement AgentAccountCard(VisualElement host)
         {
-            var card = ZettaUI.Card(ZettaUI.Title("Zetta Agent — account"));
+            var card = ZettaUI.Card(ZettaUI.Title("Zetta Agent — what it runs on"));
             var body = new VisualElement();
             card.Add(body);
+            VisualElement savedKeys = null;
 
             void Render()
             {
                 body.Clear();
+                savedKeys = null;
                 var providers = AgentCatalog.Providers;
                 if (providers == null)
                 {
@@ -211,16 +213,23 @@ namespace Zetta3D.Editor.Studio
                     return;
                 }
 
-                body.Add(ZettaUI.Hint("Run the agent on your Zetta account, or on your own API key from DeepSeek, OpenAI, Claude or Gemini."));
-                body.Add(ZettaUI.Dropdown("Run the agent on", new List<string> { "zetta", "own" },
-                    new List<string> { "My Zetta account", "My own API keys" }, ZettaPrefs.AgentAccount, value =>
-                    {
-                        ZettaPrefs.AgentAccount = value;
-                        AgentCatalog.NotifyChanged();
-                        Render();
-                    }));
-                if (ZettaPrefs.AgentAccount != "own") return;
+                var own = ZettaPrefs.AgentAccount == "own";
+                var names = providers.Select(p => p.Label).ToList();
+                var list = names.Count > 1 ? string.Join(", ", names.Take(names.Count - 1)) + " or " + names.Last() : names.FirstOrDefault();
 
+                var choices = new VisualElement().Classes("z-choices");
+                choices.Add(AccountChoice("zetta", "Zetta account", "Included with your plan. Auto picks the model and how much it thinks for each message.", !own, Choose));
+                var ownChoice = AccountChoice("own", "Your own API key",
+                    $"Use your key from {list}. Billed by the provider, not in Zetta credits.", own, Choose);
+                savedKeys = new VisualElement().Classes("z-choice-providers");
+                ownChoice.Add(savedKeys);
+                choices.Add(ownChoice);
+                body.Add(choices);
+                ShowSavedKeys();
+                if (!own) return;
+
+                if (!providers.Any(p => ZettaKeychain.Has(p.Key)))
+                    body.Add(new Label("Paste a key for any provider below to start.").Classes("z-hint", "z-hint--warn"));
                 foreach (var provider in providers) body.Add(KeyRow(provider));
                 body.Add(ZettaUI.Hint(
                     $"Keys are kept in {ZettaKeychain.StoreName}. They are sent to Zetta 3D only to run your messages, and are never saved " +
@@ -228,11 +237,61 @@ namespace Zetta3D.Editor.Studio
                     "Zetta credits. Pick the provider and model in the Agent window, under the message box."));
             }
 
+            void Choose(string account)
+            {
+                if (ZettaPrefs.AgentAccount == account) return;
+                ZettaPrefs.AgentAccount = account;
+                AgentCatalog.NotifyChanged();
+                Render();
+            }
+
+            // Each provider on the own-key choice, ✓ once its key is saved — redrawn alone, so a key row being typed in stays.
+            void ShowSavedKeys()
+            {
+                if (savedKeys == null) return;
+                savedKeys.Clear();
+                foreach (var provider in AgentCatalog.Providers ?? new List<AgentProviderInfo>())
+                {
+                    var saved = ZettaKeychain.Has(provider.Key);
+                    var chip = new Label(saved ? "✓ " + provider.Label : provider.Label).Classes("z-chip", saved ? "z-chip--success" : null);
+                    chip.tooltip = saved ? $"Your {provider.Label} key is saved" : $"No {provider.Label} key saved";
+                    savedKeys.Add(chip);
+                }
+            }
+
             Render();
             AgentCatalog.Changed += Render;
-            host.RegisterCallback<DetachFromPanelEvent>(_ => AgentCatalog.Changed -= Render);
+            ZettaKeychain.Changed += ShowSavedKeys;
+            host.RegisterCallback<DetachFromPanelEvent>(_ =>
+            {
+                AgentCatalog.Changed -= Render;
+                ZettaKeychain.Changed -= ShowSavedKeys;
+            });
             _ = AgentCatalog.RefreshAsync();
             return card;
+        }
+
+        /// <summary>One of the two things the agent can run on, as a card to click — the chosen one is filled.</summary>
+        static VisualElement AccountChoice(string account, string title, string blurb, bool chosen, System.Action<string> choose)
+        {
+            var choice = new VisualElement { name = "choice-" + account, focusable = true, tooltip = chosen ? "In use" : "Use this" };
+            choice.AddToClassList("z-choice");
+            choice.EnableInClassList("z-choice--chosen", chosen);
+            var head = new VisualElement().Classes("z-row");
+            var radio = new VisualElement().Classes("z-choice-radio");
+            radio.Add(new VisualElement().Classes("z-choice-dot"));
+            head.Add(radio);
+            head.Add(new Label(title).Classes("z-choice-title"));
+            choice.Add(head);
+            choice.Add(new Label(blurb).Classes("z-hint", "z-choice-blurb"));
+            choice.AddManipulator(new Clickable(() => choose(account)));
+            choice.RegisterCallback<KeyDownEvent>(e =>
+            {
+                if (e.keyCode is not (KeyCode.Return or KeyCode.KeypadEnter or KeyCode.Space)) return;
+                choose(account);
+                e.StopPropagation();
+            });
+            return choice;
         }
 
         /// <summary>One provider: its key saved (✓, Check, Replace, Remove) or a field to paste one.</summary>

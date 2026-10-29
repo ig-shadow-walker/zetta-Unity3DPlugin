@@ -32,7 +32,7 @@
 - **chain the tools into pipelines** that run over many pictures or models at once;
 - **build your game with the Zetta Agent**, an assistant that reads your scene and scripts, writes C#, builds
   prefabs and materials, looks at the Scene view to check its work, and makes the art it needs — on your Zetta
-  account, or on [your own Gemini, OpenAI, DeepSeek or Claude API key](#your-own-api-key).
+  account, or on [your own Gemini, OpenAI, DeepSeek, Claude or GLM API key](#your-own-api-key).
 
 Everything you make is also in your library on zetta3d.ai, and everything you made there shows up in Unity.
 
@@ -275,16 +275,16 @@ hover it to see whether Auto or you picked them.
 
 ### Your own API key
 
-Run the agent on your own API key, on any plan. It works today with **Gemini**, **OpenAI**, **DeepSeek** and
-**Claude**.
+Run the agent on your own API key, on any plan. It works today with **Gemini**, **OpenAI**, **DeepSeek**,
+**Claude** and **GLM** (Z.ai).
 
 1. Open **Unity › Settings › Zetta 3D** (Windows: **Edit › Preferences › Zetta 3D**).
-2. Under **Zetta Agent — account**, set **Run the agent on** to **My own API keys**.
+2. Under **Zetta Agent — what it runs on**, click **Your own API key**.
 3. Paste a key next to a provider and click **Save**. It is checked straight away; **Get a key** opens the
    provider's page if you don't have one yet.
 
 <p align="center">
-  <img alt="Preferences › Zetta 3D, the Zetta Agent account section: Run the agent on My own API keys, with a saved key for each provider, each with Check key, Replace and Remove" src="Documentation~/images/own-keys-settings.png" width="640">
+  <img alt="Preferences › Zetta 3D, the Zetta Agent section set to the user's own API keys, with a saved key for each provider, each with Check key, Replace and Remove" src="Documentation~/images/own-keys-settings.png" width="640">
 </p>
 
 Under the message box, the first menu then says what the agent runs on: **Zetta Account**, or one of the
@@ -303,6 +303,7 @@ every message; switch back to **Zetta Account** at any time.
   and is never saved on our servers.
 - **Pictures and PDFs.** Some models can't read them: **📷 Scene** and **🎮 Game** turn off, and the agent tells you
   before sending a file the model can't open.
+- **GLM keys.** Use a **Standard API Key** from Z.ai's API Keys page. A GLM Coding Plan key doesn't work here.
 - **If the key stops working** — wrong, out of credit, or the model is unavailable — the chat says so and
   **Open settings** takes you to the key.
 

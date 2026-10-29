@@ -716,6 +716,20 @@
 .z-think-label { color: var(--z-text-2); font-size: 12px; -unity-font-style: bold; }
 .z-think-route { margin-left: 10px; }
 /* Preferences: one provider per row for the user's own API keys. */
+/* Preferences: what the agent runs on — two cards to click, the chosen one filled blue. */
+.z-choices { flex-direction: row; flex-wrap: wrap; margin: 0 -4px 6px -4px; }
+.z-choice { flex-grow: 1; flex-shrink: 1; flex-basis: 240px; margin: 4px; padding: 10px 12px; border-radius: 10px; background-color: var(--z-raised); }
+.z-choice:hover { background-color: var(--z-hover); }
+.z-choice--chosen, .z-choice--chosen:hover { background-color: var(--z-signal-wash); }
+.z-choice-title { font-size: 13px; -unity-font-style: bold; color: var(--z-text); }
+.z-choice--chosen .z-choice-title { color: var(--z-signal-text); }
+.z-choice-blurb { margin-top: 4px; }
+.z-choice-radio { width: 14px; height: 14px; border-radius: 7px; margin-right: 8px; align-self: center; align-items: center; justify-content: center; background-color: var(--z-border-strong); }
+.z-choice-dot { width: 6px; height: 6px; border-radius: 3px; background-color: var(--z-raised); }
+.z-choice:hover .z-choice-dot { background-color: var(--z-hover); }
+.z-choice--chosen .z-choice-radio { background-color: var(--z-signal); }
+.z-choice--chosen .z-choice-dot, .z-choice--chosen:hover .z-choice-dot { background-color: var(--z-text); }
+.z-choice-providers { flex-direction: row; flex-wrap: wrap; margin: 6px -2px 0 -2px; }
 .z-key-row { padding: 8px 0 6px 0; border-top-width: 1px; border-top-color: var(--z-border); }
 .z-key-row .z-row { margin-bottom: 4px; }
 .z-error-card { flex-direction: row; align-items: center; flex-wrap: wrap; }

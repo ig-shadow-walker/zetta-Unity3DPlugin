@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.7.2] - 2026-10-29
 
 ### Added
 - **Update notifications.** The plugin checks once a day for a newer release. When one is out, a line under the

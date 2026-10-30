@@ -79,7 +79,8 @@ namespace Zetta3D.Editor
 
         void OnEnable()
         {
-            titleContent = new GUIContent("Zetta 3D", EditorGUIUtility.IconContent("d_Prefab Icon").image);
+            ShowTitle();
+            ZettaUpdates.Changed += ShowTitle;
             minSize = new Vector2(320, 360);
             _studio = new StudioPage(this);
             _pipelines = new PipelinesPage(this);
@@ -89,8 +90,33 @@ namespace Zetta3D.Editor
 
         void OnDisable()
         {
+            ZettaUpdates.Changed -= ShowTitle;
             foreach (var page in Pages) page?.Disable();
         }
+
+        const string Icons = "Packages/com.zetta3d.unity/Editor/UI/Icons/";
+
+        /// <summary>
+        /// The tab: "Zetta 3D" with the Zetta mark — carrying an upload badge while a newer version is out (blue; red
+        /// when the update is required), as the banner shows. Hovering the tab says which version.
+        /// The icons are drawn by Documentation~/art/tab-icons.mjs.
+        /// </summary>
+        void ShowTitle()
+        {
+            var known = ZettaUpdates.Known;
+            if (known == null || !known.Available)
+            {
+                titleContent = new GUIContent("Zetta 3D", TabIcon("zetta-tab"));
+                return;
+            }
+            var tip = known.Required
+                ? $"Zetta 3D — update required: {known.Latest} (you have {ZettaConfig.Version})"
+                : $"Zetta 3D — {known.Latest} is available (you have {ZettaConfig.Version})";
+            titleContent = new GUIContent("Zetta 3D", TabIcon(known.Required ? "zetta-tab-required" : "zetta-tab-update"), tip);
+        }
+
+        static Texture TabIcon(string name) =>
+            AssetDatabase.LoadAssetAtPath<Texture2D>(Icons + name + ".png") ?? EditorGUIUtility.IconContent("d_Prefab Icon").image;
 
         void OnFocus()
         {

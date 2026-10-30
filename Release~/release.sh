@@ -209,4 +209,4 @@ PY
   say "$url"
 fi
 say ""
-say "Installed copies will see $next in their update banner within a day."
+say "Installed copies will see ${next} in their update banner the next time Unity starts."

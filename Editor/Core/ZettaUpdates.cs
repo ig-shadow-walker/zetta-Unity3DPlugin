@@ -42,8 +42,8 @@ namespace Zetta3D.Editor
     }
 
     /// <summary>
-    /// Tells people when a newer Zetta 3D is out, and installs it. Checked once a day — as Unity starts and when the
-    /// Zetta 3D window is opened or focused — from <c>GET /unity-plugin/version</c>, or straight from the repository
+    /// Tells people when a newer Zetta 3D is out, and installs it. Checked every time Unity starts, and again when the
+    /// Zetta 3D window is focused six hours later — from <c>GET /unity-plugin/version</c>, or straight from the repository
     /// when the server can't be reached. What it found is kept, so the banner shows at once, offline too.
     ///
     /// Releasing needs nothing here: the latest is main's package.json. To make an update required, set
@@ -59,11 +59,11 @@ namespace Zetta3D.Editor
 
         const string KnownKey = "Zetta3D.Updates.Known";
         const string CheckedKey = "Zetta3D.Updates.CheckedAt";
-        const string DismissedKey = "Zetta3D.Updates.Dismissed";
-        const string SnoozedKey = "Zetta3D.Updates.Snoozed";
         const string InstallingKey = "Zetta3D.Updates.Installing";
+        /// <summary>Set once Unity has started and checked: a script reload re-runs the static constructor, a restart doesn't keep it.</summary>
+        const string StartedKey = "Zetta3D.Updates.CheckedThisSession";
 
-        static readonly TimeSpan Every = TimeSpan.FromDays(1);
+        static readonly TimeSpan Every = TimeSpan.FromHours(6);
         static readonly TimeSpan RetryAfterFailure = TimeSpan.FromHours(1);
 
         static Task<ZettaRelease> _pending;
@@ -90,7 +90,13 @@ namespace Zetta3D.Editor
                     SessionState.EraseString(InstallingKey);
                     if (installed == ZettaConfig.Version) Debug.Log($"Zetta 3D updated to {installed}.");
                 }
-                CheckIfDue();
+                // Every time Unity starts, so a release shows the next time it is opened; after that, every six hours.
+                if (!SessionState.GetBool(StartedKey, false))
+                {
+                    SessionState.SetBool(StartedKey, true);
+                    _ = CheckAsync();
+                }
+                else CheckIfDue();
             };
         }
 
@@ -114,32 +120,10 @@ namespace Zetta3D.Editor
             }
         }
 
-        /// <summary>Whether the window shows the update banner: an update is out and it hasn't been put away.</summary>
-        public static bool ShowBanner
-        {
-            get
-            {
-                var known = Known;
-                if (known == null || !known.Available) return false;
-                // A required update comes back each time Unity starts; an optional one, only for a newer release.
-                return known.Required
-                    ? SessionState.GetString(SnoozedKey, "") != known.Latest
-                    : EditorPrefs.GetString(DismissedKey, "") != known.Latest;
-            }
-        }
+        /// <summary>Whether the window shows the update banner: whenever a newer version is out, until it is installed. It can't be closed.</summary>
+        public static bool ShowBanner => Known is { Available: true };
 
-        /// <summary>✕ on the banner.</summary>
-        public static void Dismiss()
-        {
-            var known = Known;
-            if (known == null) return;
-            if (known.Required) SessionState.SetString(SnoozedKey, known.Latest);
-            else EditorPrefs.SetString(DismissedKey, known.Latest);
-            Problem = null;
-            Changed?.Invoke();
-        }
-
-        /// <summary>Checks when the last check is a day old (an hour, when it failed).</summary>
+        /// <summary>Checks when the last check is six hours old (an hour, when it failed).</summary>
         public static void CheckIfDue()
         {
             if (DateTime.UtcNow < LastChecked() + Every) return;

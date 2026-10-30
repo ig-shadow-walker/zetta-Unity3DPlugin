@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- Updates: the plugin checks for a newer release every time Unity starts, so a new version shows the next time you
+  open it — not up to a day later. While Unity stays open it checks again every 6 hours.
+- The Zetta 3D window's tab shows the Zetta mark instead of a cube. While a newer version is out it carries an upload
+  badge — blue, or red when the update is required — and hovering the tab says which version.
+- Updates: the update line under the header can no longer be closed. It shows on every page while a newer version is
+  out, and goes away once you update.
+
 ## [0.7.3] - 2026-10-30
 
 ### Added

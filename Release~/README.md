@@ -20,8 +20,9 @@ For a required update add `--require` (or `--minimum 0.7.0`) and `--message "…
 
 ## Update notifications
 
-Installed copies of the plugin check once a day for a newer release, and show a banner in the Zetta 3D
-window with **What's new**, **Update** and **✕**. Update installs the newest release through the Package
+Installed copies of the plugin check for a newer release every time Unity starts (and every 6 hours while it
+stays open), and show a banner in the Zetta 3D
+window with **What's new** and **Update**, which stays (it has no close button) until the copy is updated. Update installs the newest release through the Package
 Manager.
 
 **A normal release needs nothing extra.** The latest version is the `version` in `package.json` on `main`,
@@ -37,8 +38,8 @@ change they can't handle. In the release commit, edit `update.json`:
 }
 ```
 
-- `minimum` is the oldest version that still works. Anything older shows a red banner that only hides until
-  Unity restarts. Use `null` when nothing is required.
+- `minimum` is the oldest version that still works. Anything older shows the banner in red, with
+  "Update required". Use `null` when nothing is required.
 - `message` is optional (up to 300 characters). It is shown after the banner text, on both kinds of update.
   Use `null` for none.
 

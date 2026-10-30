@@ -6,8 +6,8 @@ using Zetta3D.Editor.Agent;
 namespace Zetta3D.Editor
 {
     /// <summary>
-    /// The line under the window's header when a newer Zetta 3D is out: what's new, Update, ✕. A required update is
-    /// red, and ✕ only puts it away until Unity starts again.
+    /// The line under the window's header while a newer Zetta 3D is out — What's new and Update, on every page, until it
+    /// is installed. It has no close button: it goes away when the update does. A required update is red.
     /// </summary>
     public sealed class ZettaUpdateBanner : VisualElement
     {
@@ -15,7 +15,6 @@ namespace Zetta3D.Editor
         readonly Button _notes;
         readonly Button _update;
         readonly Button _howTo;
-        readonly Button _close;
 
         public ZettaUpdateBanner()
         {
@@ -26,11 +25,9 @@ namespace Zetta3D.Editor
             _update = ZettaUI.Button("Update", Install, "z-button--small", "z-button--signal");
             _update.tooltip = "Install it through the Package Manager. Unity reloads its scripts when it's done.";
             _howTo = ZettaUI.Button("How to update", ZettaUpdates.OpenHowTo, "z-button--small", "z-button--ghost");
-            _close = ZettaUI.Button("✕", ZettaUpdates.Dismiss, "z-button--small", "z-button--ghost");
             Add(_notes);
             Add(_update);
             Add(_howTo);
-            Add(_close);
             ZettaUI.WhileOnScreen(this, h => ZettaUpdates.Changed += h, h => ZettaUpdates.Changed -= h, Render);
             Render();
         }
@@ -38,13 +35,12 @@ namespace Zetta3D.Editor
         void Render()
         {
             var known = ZettaUpdates.Known;
-            var shown = ZettaUpdates.Installing || ZettaUpdates.Problem != null || ZettaUpdates.ShowBanner;
-            this.Visible(shown && known != null);
+            // Only while a newer version is out — then always, failed attempt or not; never once it is installed.
+            this.Visible(ZettaUpdates.ShowBanner);
             if (known == null) return;
 
             var required = known.Required;
             EnableInClassList("z-update--required", required);
-            _close.tooltip = required ? "Hide until Unity starts again" : $"Don't remind me about {known.Latest}";
 
             if (ZettaUpdates.Installing)
                 _text.text = $"Updating to Zetta 3D {known.Latest}… Unity reloads its scripts when it's done.";
@@ -57,9 +53,10 @@ namespace Zetta3D.Editor
                 _text.text = $"Zetta 3D {known.Latest} is out — you have {ZettaConfig.Version}." + (known.Message != null ? " " + known.Message : "");
 
             _notes.Visible(!ZettaUpdates.Installing);
-            _update.Visible(!ZettaUpdates.Installing && ZettaUpdates.Problem == null);
+            // After a failed update: try again, or read how to update by hand.
+            _update.text = ZettaUpdates.Problem != null ? "Try again" : "Update";
+            _update.Visible(!ZettaUpdates.Installing);
             _howTo.Visible(ZettaUpdates.Problem != null);
-            _close.Visible(!ZettaUpdates.Installing);
         }
 
         static void Install()

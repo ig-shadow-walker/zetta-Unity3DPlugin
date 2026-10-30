@@ -6,8 +6,20 @@
 - Agent: **GLM** (Z.ai) joins the providers you can run the agent on with your own API key: GLM-5.3, GLM-5.3 Flash
   and FlashX (which see pictures), GLM-5.2 and older GLM models. Use a Standard API Key from Z.ai; a GLM Coding Plan
   key doesn't work here.
+- Agent: **Meta** joins them too: Muse Wonder (in preview) and Muse Spark 1.3, 1.2 and 1.1, which all see pictures and
+  read PDFs. Use an API key from Meta's Model API.
+
+- Agent: **pictures, the whole Image Studio.** Besides drawing from a description, the agent now draws in the look
+  of 1–3 reference pictures, edits a picture by instructions, combines 2–14 pictures into one, and finds pictures
+  you made before. Pictures come from the project (tag them with @, or **+ › Picture from the project…**), from what
+  you attach to a message (files, Scene and Game captures), or from your 2D library. Results land in the library and
+  show in the chat; the agent saves them as textures or sprites, or over the original file when you ask (import
+  settings kept, undoable). Editing and combining are on paid plans.
 
 ### Changed
+- Agent: **Scene**, **Game** and **File** under the message box are now one **+** button. It opens a menu with
+  Picture of the Scene view, Picture of the Game view and File…; the pictures are greyed out on a model that can't
+  see.
 - Preferences › Zetta 3D: what the agent runs on is now two cards to click, **Zetta account** and **Your own API
   key**, instead of a drop-down. The own-key card names every provider and ticks the ones with a saved key.
 

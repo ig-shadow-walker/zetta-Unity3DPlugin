@@ -340,6 +340,46 @@ namespace Zetta3D.Editor
         }
 
         /// <summary>Saves image bytes into the project as a texture asset and returns its path.</summary>
+        /// <summary>
+        /// Overwrites an existing project image with new picture bytes, re-encoded to the file's own format (PNG or JPEG),
+        /// and keeps its import settings — only the texture type changes, and only when one is given. Recorded for undo.
+        /// </summary>
+        public static string ReplaceImage(byte[] bytes, string path, string textureType = null)
+        {
+            path = path.Replace('\\', '/');
+            if (!path.StartsWith("Assets/")) throw new ArgumentException("Images must be saved under Assets/.");
+            var ext = Path.GetExtension(path).ToLowerInvariant();
+            if (ext is not (".png" or ".jpg" or ".jpeg"))
+                throw new Agent.ToolException($"'{path}' is a {ext} file, which can't be overwritten with a picture — save a new PNG next to it instead.");
+
+            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            byte[] encoded;
+            try
+            {
+                if (!texture.LoadImage(bytes)) throw new Agent.ToolException("The picture could not be read.");
+                encoded = ext == ".png" ? texture.EncodeToPNG() : texture.EncodeToJPG(95);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(texture);
+            }
+
+            Agent.AgentChanges.WillWrite(path);
+            File.WriteAllBytes(path, encoded);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+            if (textureType != null && AssetImporter.GetAtPath(path) is TextureImporter importer)
+            {
+                importer.textureType = textureType switch
+                {
+                    "sprite" => TextureImporterType.Sprite,
+                    "normal" => TextureImporterType.NormalMap,
+                    _ => TextureImporterType.Default,
+                };
+                importer.SaveAndReimport();
+            }
+            return path;
+        }
+
         public static string SaveImage(byte[] bytes, string path, string textureType = "default")
         {
             path = path.Replace('\\', '/');

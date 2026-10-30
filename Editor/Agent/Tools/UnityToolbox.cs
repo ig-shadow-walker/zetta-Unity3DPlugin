@@ -48,6 +48,7 @@ namespace Zetta3D.Editor.Agent
             ["list_pipelines"] = Async(ZettaTools.ListPipelines),
             ["get_pipeline"] = Async(ZettaTools.GetPipelineTool),
             ["pipeline_run_status"] = Async(ZettaTools.PipelineRunStatus),
+            ["list_images"] = Async(ImageTools.List),
             // Write
             ["write_file"] = Sync(FileTools.Write),
             ["edit_file"] = Sync(FileTools.Edit),
@@ -69,6 +70,10 @@ namespace Zetta3D.Editor.Agent
             ["edit_pipeline"] = Async(ZettaTools.EditPipeline),
             ["manage_pipeline_run"] = Async(ZettaTools.ManagePipelineRun),
             ["import_pipeline_results"] = Async(ZettaTools.ImportPipelineResults),
+            // Pictures (protocol v1.8): new pictures in the 2D library — the project is untouched until save_image_asset.
+            ["generate_image_with_references"] = Async(ImageTools.GenerateWithReferences),
+            ["edit_image"] = Async(ImageTools.Edit),
+            ["compose_images"] = Async(ImageTools.Compose),
             // Destructive
             ["delete_gameobject"] = Sync(SceneTools.Delete, true),
             ["remove_component"] = Sync(ComponentTools.RemoveComponent, true),
@@ -204,7 +209,8 @@ namespace Zetta3D.Editor.Agent
                             default: return "Changing scenes";
                         }
                     case "move_asset": return $"Moving {S(i, "from")} to {S(i, "to")}";
-                    case "save_image_asset": return $"Saving image #{S(i, "imageId")} to {S(i, "path")}";
+                    case "save_image_asset":
+                        return Args.Bool(i, "replace", false) ? $"Replacing {S(i, "path")} with image #{S(i, "imageId")}" : $"Saving image #{S(i, "imageId")} to {S(i, "path")}";
                     case "import_generation": return $"Importing model #{S(i, "generationId")}";
                     case "play_mode":
                         switch (S(i, "action"))
@@ -247,7 +253,7 @@ namespace Zetta3D.Editor.Agent
                         }
                     }
                     default:
-                        return ZettaTools.DescribePipelineTool(call?.Name, i) ?? call?.Name ?? "Running a tool";
+                        return ImageTools.Describe(call?.Name, i) ?? ZettaTools.DescribePipelineTool(call?.Name, i) ?? call?.Name ?? "Running a tool";
                 }
             }
             catch (Exception)
@@ -314,6 +320,12 @@ namespace Zetta3D.Editor.Agent
                     case "execute_menu_item": return $"Runs the menu item \"{S(i, "path")}\".";
                     case "play_mode": return $"Play mode: {S(i, "action")}";
                     case "undo": return $"Undo {Args.Int(i, "steps", 1, 1, 20)} step(s).";
+                    case "generate_image_with_references":
+                    case "edit_image":
+                    case "compose_images":
+                        return $"{ImageTools.Describe(call.Name, i)}:\n“{Fmt.Short(S(i, "prompt"), 300)}”";
+                    case "save_image_asset" when Args.Bool(i, "replace", false):
+                        return $"Overwrites {S(i, "path")} with image #{S(i, "imageId")}, keeping its import settings. It can be undone.";
                     default:
                         return ZettaTools.SummarizePipelineTool(call?.Name, i) ?? Compact(i);
                 }

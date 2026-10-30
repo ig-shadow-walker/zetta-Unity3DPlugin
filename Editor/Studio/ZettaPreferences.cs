@@ -16,7 +16,7 @@ namespace Zetta3D.Editor.Studio
             new SettingsProvider("Preferences/Zetta 3D", SettingsScope.User)
             {
                 label = "Zetta 3D",
-                keywords = new HashSet<string> { "Zetta", "3D", "account", "sign in", "API", "API key", "OpenAI", "Claude", "Gemini", "DeepSeek", "GLM", "Z.ai", "models folder", "images folder", "glb", "fbx" },
+                keywords = new HashSet<string> { "Zetta", "3D", "account", "sign in", "API", "API key", "OpenAI", "Claude", "Gemini", "DeepSeek", "GLM", "Z.ai", "Meta", "Muse", "models folder", "images folder", "glb", "fbx" },
                 activateHandler = (_, root) => Build(root),
             };
 

@@ -29,6 +29,9 @@ namespace Zetta3D.Editor.Agent
         public AgentDocument Document;
         public string Text;
         public AgentMention Mention;
+        /// <summary>A picture's file as it was on disk (Image may be scaled down), kept for the picture tools.</summary>
+        public byte[] Original;
+        public string OriginalName;
 
         public const int MaxTextBytes = 200 * 1024;
         public const int MaxPdfBytes = 6 * 1024 * 1024;
@@ -58,7 +61,7 @@ namespace Zetta3D.Editor.Agent
 
             var bytes = File.ReadAllBytes(full);
             if (ImageExtensions.Contains(ext))
-                return new AgentAttachment { Kind = "image", Label = "picture " + name, Image = Picture(bytes, ext) };
+                return new AgentAttachment { Kind = "image", Label = "picture " + name, Image = Picture(bytes, ext), Original = bytes, OriginalName = name };
 
             if (ext == ".pdf")
             {
@@ -138,6 +141,69 @@ namespace Zetta3D.Editor.Agent
             var root = System.IO.Path.GetFullPath(Path.Combine(Application.dataPath, "..")).Replace('\\', '/').TrimEnd('/') + "/";
             var f = full.Replace('\\', '/');
             return f.StartsWith(root, StringComparison.OrdinalIgnoreCase) ? f.Substring(root.Length) : null;
+        }
+    }
+
+    /// <summary>
+    /// Pictures the user attached to a message — files from outside the project, Scene and Game captures — kept in
+    /// Library/Zetta3D/Attached (not imported, not in the project) so the picture tools can edit or compose them by
+    /// "attached:&lt;name&gt;", the name the message gives them. Kept a week.
+    /// </summary>
+    public static class AttachedPictures
+    {
+        public const string Prefix = "attached:";
+        const string Folder = "Library/Zetta3D/Attached";
+        static readonly TimeSpan KeepFor = TimeSpan.FromDays(7);
+
+        /// <summary>Keeps a picture and returns its "attached:name" — the same bytes under the same name come back as they were.</summary>
+        public static string Keep(byte[] bytes, string name)
+        {
+            Directory.CreateDirectory(Folder);
+            Sweep();
+            var safe = Safe(name);
+            var stem = Path.GetFileNameWithoutExtension(safe);
+            var ext = Path.GetExtension(safe);
+            for (var n = 1; ; n++)
+            {
+                var candidate = n == 1 ? safe : $"{stem}-{n}{ext}";
+                var file = Path.Combine(Folder, candidate);
+                if (File.Exists(file) && !File.ReadAllBytes(file).SequenceEqual(bytes)) continue;
+                File.WriteAllBytes(file, bytes);
+                return Prefix + candidate;
+            }
+        }
+
+        /// <summary>The file behind an "attached:name", or null when it is not one (or is gone).</summary>
+        public static string FileOf(string key)
+        {
+            if (key == null || !key.StartsWith(Prefix, StringComparison.Ordinal)) return null;
+            var name = key.Substring(Prefix.Length).Trim();
+            if (name.Length == 0 || name != Safe(name)) return null;
+            var file = Path.Combine(Folder, name);
+            return File.Exists(file) ? file : null;
+        }
+
+        /// <summary>Letters, digits, dot, dash and underscore only — no folders, so a name can't reach outside the store.</summary>
+        static string Safe(string name)
+        {
+            var file = Path.GetFileName(name ?? "") ?? "";
+            var clean = new string(file.Select(c => char.IsLetterOrDigit(c) || c is '.' or '-' or '_' ? c : '-').ToArray()).Trim('.', '-');
+            if (clean.Length == 0) clean = "picture";
+            if (clean.Length > 80) clean = clean.Substring(clean.Length - 80);
+            return Path.HasExtension(clean) ? clean : clean + ".png";
+        }
+
+        static void Sweep()
+        {
+            try
+            {
+                foreach (var file in Directory.GetFiles(Folder))
+                    if (DateTime.UtcNow - File.GetLastWriteTimeUtc(file) > KeepFor) File.Delete(file);
+            }
+            catch (IOException)
+            {
+                // Best effort: an old picture left behind costs a little disk.
+            }
         }
     }
 }

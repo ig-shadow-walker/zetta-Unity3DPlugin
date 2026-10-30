@@ -592,6 +592,12 @@ namespace Zetta3D.Editor.Agent
                     if (batch != _batch || State.Phase != "tools") return;
                     result.ToolUseId = call.ToolUseId;
                     step.Status = result.IsError ? "error" : "done";
+                    if (result.ShowImageId > 0)
+                    {
+                        // A picture the tool made (edit_image, compose_images…): drawn like a generate_image result.
+                        if (!string.IsNullOrEmpty(result.ShowImageUrl)) State.RememberImage(result.ShowImageId, result.ShowImageUrl);
+                        State.Items.Add(new ChatItem { Kind = "image", ImageUrl = result.ShowImageUrl, ImageId = result.ShowImageId, Text = $"Image #{result.ShowImageId}" });
+                    }
                     step.Detail = result.IsError ? Shorten(result.Content, 240) : step.Detail;
                     if (result.WroteScripts) State.LastScriptResult = results.Count;
                     results.Add(result);
@@ -960,6 +966,10 @@ namespace Zetta3D.Editor.Agent
             "process_model" => "Setting up a model tool",
             "import_generation" => "Importing a model",
             "list_generations" => "Looking through your models",
+            "list_images" => "Looking through your pictures",
+            "edit_image" => "Editing a picture",
+            "compose_images" => "Composing pictures",
+            "generate_image_with_references" => "Drawing a picture",
             "unity_project_info" => "Reading the project",
             "inspect_gameobject" => "Inspecting an object",
             "console_logs" => "Reading the console",

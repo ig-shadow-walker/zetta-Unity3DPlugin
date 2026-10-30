@@ -32,7 +32,7 @@
 - **chain the tools into pipelines** that run over many pictures or models at once;
 - **build your game with the Zetta Agent**, an assistant that reads your scene and scripts, writes C#, builds
   prefabs and materials, looks at the Scene view to check its work, and makes the art it needs — on your Zetta
-  account, or on [your own Gemini, OpenAI, DeepSeek, Claude or GLM API key](#your-own-api-key).
+  account, or on [your own Gemini, OpenAI, DeepSeek, Claude, GLM or Meta API key](#your-own-api-key).
 
 Everything you make is also in your library on zetta3d.ai, and everything you made there shows up in Unity.
 
@@ -222,7 +222,8 @@ does it in the Editor, and checks the result.
 | **Assets** | Finds, moves and organizes assets; saves generated images as textures or sprites |
 | **Testing** | Enters, pauses and exits Play Mode, reads the Console, and looks at the Game view |
 | **The Editor itself** | Runs Editor menu items, and undoes its own steps when you ask |
-| **3D models and images** | Generates 3D models, runs the finishing tools (retopology, Smart UV, texturing, rigging, segmentation), draws images, then imports and places the results |
+| **3D models** | Generates 3D models, runs the finishing tools (retopology, Smart UV, texturing, rigging, segmentation), then imports and places the results |
+| **Pictures** | Draws pictures from a description or in the look of references, edits a picture by instructions, combines several into one, and finds the ones you made before — then saves them as textures or sprites, or over the original. See [Pictures](#pictures) |
 | **Pipelines** | Builds a pipeline from a description, runs it on your pictures or models, follows the runs and imports what they make |
 
 **Every change it makes goes on the Undo stack**, named after what it did, so **Edit › Undo** takes it back.
@@ -236,7 +237,24 @@ does it in the Editor, and checks the result.
 - *"Generate a low-poly treasure chest and put it next to the player."*
 - *"Build a pipeline that generates, retopologizes, textures and rigs a set of props, and run it on these five
   pictures."*
+- *"Make @Hero.png a night-time version and replace the original."*
+- *"Put the knight from this picture into the castle background, as a 16:9 title screen."*
 - *"Look at my scene and tell me what's here."* — or switch to **Ask** mode to explore a project safely.
+
+### Pictures
+
+The agent has the Image Studio's tools, and works with pictures from three places: the project (tag one with
+`@`, or **+ › Picture from the project…**), the pictures you attach to a message (a file, or the Scene or Game
+view), and your Zetta 2D library (the ones made here or on zetta3d.ai).
+
+- **Draw** a picture from a description — a texture, a sprite, UI art, a concept — or **in the look of** one to
+  three reference pictures. Free on every plan.
+- **Edit** one picture by instructions: *"make it night"*, *"remove the background"*, *"give him a red cape"*.
+- **Combine** two to fourteen pictures into one: a character in a scene, props in a lineup, a pattern on an object.
+
+Each result is a new picture in your 2D library, shown in the chat — your project file isn't touched until the
+agent saves it, as a new texture or sprite, or **over the original** when you ask (its import settings stay, and
+**Undo** in the changes list brings the old one back). Editing and combining are on paid plans.
 
 ### Memory
 
@@ -276,7 +294,7 @@ hover it to see whether Auto or you picked them.
 ### Your own API key
 
 Run the agent on your own API key, on any plan. It works today with **Gemini**, **OpenAI**, **DeepSeek**,
-**Claude** and **GLM** (Z.ai).
+**Claude**, **GLM** (Z.ai) and **Meta** (Muse).
 
 1. Open **Unity › Settings › Zetta 3D** (Windows: **Edit › Preferences › Zetta 3D**).
 2. Under **Zetta Agent — what it runs on**, click **Your own API key**.
@@ -301,7 +319,7 @@ every message; switch back to **Zetta Account** at any time.
 - **Your key stays yours.** It is kept in your system's key store — macOS Keychain, Windows Credential Manager or
   the Linux keyring — never in Unity's preferences or your project. It goes to Zetta 3D only to run your messages
   and is never saved on our servers.
-- **Pictures and PDFs.** Some models can't read them: **📷 Scene** and **🎮 Game** turn off, and the agent tells you
+- **Pictures and PDFs.** Some models can't read them: the Scene and Game pictures under **+** turn off, and the agent tells you
   before sending a file the model can't open.
 - **GLM keys.** Use a **Standard API Key** from Z.ai's API Keys page. A GLM Coding Plan key doesn't work here.
 - **If the key stops working** — wrong, out of credit, or the model is unavailable — the chat says so and
@@ -321,9 +339,9 @@ every message; switch back to **Zetta Account** at any time.
 A tag shows as a chip and is sent as the item's address, not its contents — the agent opens the file or inspects
 the object itself when it gets to work on it.
 
-**Attach files** with 📎 or by dropping them in: pictures and PDFs go to the agent, code and text files are read
-in, and anything else (models, audio, fonts…) is copied into `Assets/Zetta3D/Attachments/` and tagged.
-**📷 Scene** and **🎮 Game** attach a picture of either view.
+**Attach** with **+** under the message box: **Picture of the Scene view**, **Picture of the Game view**,
+**Picture from the project…** or **File…** — or drop files in. Pictures and PDFs go to the agent, code and text files are read in, and anything else
+(models, audio, fonts…) is copied into `Assets/Zetta3D/Attachments/` and tagged.
 
 ### It asks when it needs you
 

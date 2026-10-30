@@ -667,6 +667,7 @@
 .z-composer-group { flex-direction: row; align-items: center; flex-shrink: 0; margin-right: 6px; }
 .z-composer-chip { height: 26px; padding: 0 10px; margin: 2px; border-radius: 8px; border-width: 0; background-color: rgba(255, 255, 255, 0.05); color: var(--z-text-2); font-size: 11px; }
 .z-composer-chip:hover { background-color: var(--z-hover); color: var(--z-text); }
+.z-composer-plus { width: 26px; padding: 0; border-radius: 13px; font-size: 17px; -unity-text-align: middle-center; -unity-font-style: normal; }
 .z-composer-popup { margin: 2px; min-width: 72px; }
 .z-composer-popup .unity-base-popup-field__text { margin-right: 6px; }
 .z-composer-popup .unity-base-field__input { height: 26px; border-radius: 8px; border-width: 0; background-color: rgba(255, 255, 255, 0.05); color: var(--z-text); padding: 0 8px; }

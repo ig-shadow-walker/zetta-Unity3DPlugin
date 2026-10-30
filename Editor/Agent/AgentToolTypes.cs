@@ -28,6 +28,10 @@ namespace Zetta3D.Editor.Agent
         /// <summary>Not sent: set when the call wrote or edited a script, so the runtime waits for compilation.</summary>
         [JsonIgnore] public bool WroteScripts;
 
+        /// <summary>Not sent: a picture the call made (a 2D library id and its link), drawn in the chat like a generate_image result.</summary>
+        [JsonIgnore] public long ShowImageId;
+        [JsonIgnore] public string ShowImageUrl;
+
         public static ToolResult Ok(string content) => new ToolResult { Content = Truncate(content) };
         public static ToolResult Error(string message) => new ToolResult { Content = Truncate(message), IsError = true };
 

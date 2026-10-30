@@ -38,8 +38,8 @@ namespace Zetta3D.Editor.Agent
         PopupField<string> _provider;
         /// <summary>The provider, model and thinking menus — rebuilt when the account, a key or the catalog changes.</summary>
         VisualElement _pickers;
-        Button _sceneChip;
-        Button _gameChip;
+        Button _attach;
+        bool _canSee = true;
         readonly List<ToolImage> _images = new List<ToolImage>();
         ThinkingIndicator _working;
         /// <summary>Files attached from disk: PDFs, text (inlined) and project copies (tagged as assets).</summary>
@@ -52,6 +52,8 @@ namespace Zetta3D.Editor.Agent
         int _mentionStart = -1;
         /// <summary>What each attachment is ("Scene view", "Game view (Main Camera)", a file name), told to the agent.</summary>
         readonly List<string> _imageLabels = new List<string>();
+        /// <summary>Each attached picture's "attached:name", so the agent can edit or compose it.</summary>
+        readonly List<string> _imageKeys = new List<string>();
         bool _dirty;
 
         // The account menu's first entry; never a provider key.
@@ -239,15 +241,11 @@ namespace Zetta3D.Editor.Agent
 
             var bar = new VisualElement().Classes("z-composer-bar");
             var attach = new VisualElement().Classes("z-composer-group");
-            _sceneChip = ZettaUI.Button("📷  Scene", AttachScene, "z-composer-chip");
-            _sceneChip.tooltip = "Attach a picture of the Scene view";
-            attach.Add(_sceneChip);
-            _gameChip = ZettaUI.Button("🎮  Game", AttachGame, "z-composer-chip");
-            _gameChip.tooltip = "Attach what the game camera sees (the Game view)";
-            attach.Add(_gameChip);
-            var file = ZettaUI.Button("📎  File", AttachFile, "z-composer-chip");
-            file.tooltip = "Attach any file — pictures, PDFs, code and text, models, audio… (or drag files onto the chat). Type @, or select items and press ⇧⌘M (Ctrl+Shift+M), to tag scene objects and project assets.";
-            attach.Add(file);
+            _attach = ZettaUI.Button("+", null, "z-composer-chip", "z-composer-plus");
+            _attach.name = "composer-attach";
+            _attach.clicked += () => ShowAttachMenu(_attach.worldBound);
+            _attach.tooltip = "Attach a picture of the Scene or Game view, or any file — or drag files onto the chat. Type @, or select items and press ⇧⌘M (Ctrl+Shift+M), to tag scene objects and project assets.";
+            attach.Add(_attach);
             bar.Add(attach);
 
             _pickers = new VisualElement().Classes("z-composer-group");
@@ -377,17 +375,34 @@ namespace Zetta3D.Editor.Agent
 
         static string ThinkingLabel(string level) => ThinkingLabels[Math.Max(0, Thinking.IndexOf(level))];
 
-        /// <summary>Scene and Game attach a picture: not offered to a model that can't see.</summary>
-        void SetCaptureChips(bool vision)
+        /// <summary>The pictures of the Scene and Game views: not offered to a model that can't see.</summary>
+        void SetCaptureChips(bool vision) => _canSee = vision;
+
+        /// <summary>What + offers, in order: a label, whether it can be picked now, and what it does. A null label is a separator.</summary>
+        internal List<(string label, bool enabled, Action run)> AttachOptions()
         {
-            foreach (var chip in new[] { _sceneChip, _gameChip })
+            var why = _canSee ? "" : " — this model can't see pictures";
+            return new List<(string, bool, Action)>
             {
-                if (chip == null) continue;
-                chip.SetEnabled(vision);
-                chip.tooltip = vision
-                    ? chip == _sceneChip ? "Attach a picture of the Scene view" : "Attach what the game camera sees (the Game view)"
-                    : "This model can't see pictures. Pick one that can to attach a view.";
+                ("📷  Picture of the Scene view" + why, _canSee, AttachScene),
+                ("🎮  Picture of the Game view" + why, _canSee, AttachGame),
+                (null, false, null),
+                ("🖼  Picture from the project…", true, AttachProjectPicture),
+                ("📎  File…", true, AttachFile),
+            };
+        }
+
+        /// <summary>+ under the message box: the three ways to attach something, in one menu.</summary>
+        void ShowAttachMenu(Rect below)
+        {
+            var menu = new GenericMenu();
+            foreach (var (label, enabled, run) in AttachOptions())
+            {
+                if (label == null) menu.AddSeparator("");
+                else if (enabled) menu.AddItem(new GUIContent(label), false, () => run());
+                else menu.AddDisabledItem(new GUIContent(label));
             }
+            menu.DropDown(below);
         }
 
         static void OpenSettings() => SettingsService.OpenUserPreferences("Preferences/Zetta 3D");
@@ -444,7 +459,8 @@ namespace Zetta3D.Editor.Agent
             _mentionPopup?.Close();
             _input.value = "";
             // Say what each picture is, so the agent knows a Game view from a Scene view.
-            if (_imageLabels.Count > 0) text += "\n\n(Attached: " + string.Join("; ", _imageLabels) + ")";
+            if (_imageLabels.Count > 0)
+                text += "\n\n(Attached: " + string.Join("; ", _imageLabels.Select((label, i) => _imageKeys[i] != null ? $"{label} [{_imageKeys[i]}]" : label)) + ")";
             foreach (var file in _files.Where(f => f.Kind == "text")) text += file.TextBlock();
             // Every tag chip goes along as an address the agent works with (it reads the file itself when it needs to).
             var mentions = _mentions.ToList();
@@ -455,6 +471,7 @@ namespace Zetta3D.Editor.Agent
             AgentRuntime.Send(text, _images.ToList(), documents);
             _images.Clear();
             _imageLabels.Clear();
+            _imageKeys.Clear();
             _files.Clear();
             _mentions.Clear();
             RenderAttachments();
@@ -468,7 +485,7 @@ namespace Zetta3D.Editor.Agent
                 ShowNotification(new GUIContent("Open a Scene view first."));
                 return;
             }
-            AddImage(ToolImage.Jpeg(shot.Jpeg), "Scene view");
+            AddImage(ToolImage.Jpeg(shot.Jpeg), "Scene view", shot.Jpeg, "scene-view.jpg");
         }
 
         /// <summary>What the player sees: the game camera (Main Camera, or the first active camera), at the Game view's aspect.</summary>
@@ -480,7 +497,18 @@ namespace Zetta3D.Editor.Agent
                 ShowNotification(new GUIContent("There is no camera in the scene to capture."));
                 return;
             }
-            AddImage(ToolImage.Jpeg(shot.Jpeg), shot.Label);
+            AddImage(ToolImage.Jpeg(shot.Jpeg), shot.Label, shot.Jpeg, "game-view.jpg");
+        }
+
+        /// <summary>
+        /// A picture in the project, tagged so the agent can look at it, edit it or build from it ("make this night time").
+        /// Opens in Assets, showing images only; a file picked from outside the project is attached as any file is.
+        /// </summary>
+        void AttachProjectPicture()
+        {
+            var path = EditorUtility.OpenFilePanelWithFilters("Pick a picture from the project", Application.dataPath,
+                new[] { "Images", "png,jpg,jpeg,webp,psd,tga,tif,tiff,bmp,exr,hdr,gif", "All files", "*" });
+            if (!string.IsNullOrEmpty(path)) AddFiles(new[] { path });
         }
 
         void AttachFile()
@@ -516,7 +544,7 @@ namespace Zetta3D.Editor.Agent
                     switch (attachment.Kind)
                     {
                         case "image":
-                            AddImage(attachment.Image, attachment.Label);
+                            AddImage(attachment.Image, attachment.Label, attachment.Original, attachment.OriginalName);
                             break;
                         case "asset":
                             AddMention(attachment.Mention);
@@ -673,7 +701,7 @@ namespace Zetta3D.Editor.Agent
             });
         }
 
-        void AddImage(ToolImage image, string label)
+        void AddImage(ToolImage image, string label, byte[] original = null, string name = null)
         {
             if (_images.Count >= 4)
             {
@@ -688,6 +716,16 @@ namespace Zetta3D.Editor.Agent
             if (!Fits(image.Data.Length)) return;
             _images.Add(image);
             _imageLabels.Add(label);
+            string key = null;
+            try
+            {
+                key = AttachedPictures.Keep(original ?? Convert.FromBase64String(image.Data), name ?? label);
+            }
+            catch (Exception)
+            {
+                // Still sent to the agent to look at; only editing it by name is lost.
+            }
+            _imageKeys.Add(key);
             RenderAttachments();
         }
 
@@ -706,6 +744,7 @@ namespace Zetta3D.Editor.Agent
                 {
                     _images.RemoveAt(index);
                     _imageLabels.RemoveAt(index);
+                    _imageKeys.RemoveAt(index);
                     RenderAttachments();
                 });
                 _attachments.Add(thumb);

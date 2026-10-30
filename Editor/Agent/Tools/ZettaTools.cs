@@ -15,7 +15,7 @@ namespace Zetta3D.Editor.Agent
     /// </summary>
     static partial class ZettaTools
     {
-        static void RequireSignIn()
+        internal static void RequireSignIn()
         {
             if (!ZettaAuth.IsSignedIn)
                 throw new ToolException("Not signed in to Zetta 3D. Ask the user to sign in from the Zetta 3D window, then try again.");
@@ -125,7 +125,7 @@ namespace Zetta3D.Editor.Agent
 
         // ─── images ──────────────────────────────────────────────────────────────
 
-        static async Task<string> ImageUrl(long imageId, ToolRunContext ctx)
+        internal static async Task<string> ImageUrl(long imageId, ToolRunContext ctx)
         {
             var url = ctx.ImageUrl?.Invoke(imageId);
             if (!string.IsNullOrEmpty(url)) return url;
@@ -136,13 +136,13 @@ namespace Zetta3D.Editor.Agent
             }
             catch (ZettaApiException e) when (e.Status == 404)
             {
-                throw new ToolException($"Image #{imageId} was not found. Use the imageId that generate_image returned.");
+                throw new ToolException($"Image #{imageId} was not found. Use an imageId a picture tool returned, or one from list_images.");
             }
             if (string.IsNullOrEmpty(url)) throw new ToolException($"Image #{imageId} has no downloadable file.");
             return url;
         }
 
-        static string ImageContentType(byte[] bytes)
+        internal static string ImageContentType(byte[] bytes)
         {
             if (bytes.Length > 3 && bytes[0] == 0xFF && bytes[1] == 0xD8) return "image/jpeg";
             if (bytes.Length > 12 && bytes[0] == (byte)'R' && bytes[1] == (byte)'I' && bytes[8] == (byte)'W' && bytes[9] == (byte)'E') return "image/webp";
@@ -157,11 +157,21 @@ namespace Zetta3D.Editor.Agent
             var textureType = (Args.Str(input, "textureType", "default") ?? "default").Trim().ToLowerInvariant();
             if (textureType != "default" && textureType != "sprite" && textureType != "normal")
                 throw new ToolException("'textureType' must be default, sprite or normal.");
+            var replace = Args.Bool(input, "replace", false);
+            if (replace && !File.Exists(path)) throw new ToolException($"'{path}' does not exist, so there is nothing to replace. Leave replace out to save a new file.");
 
             ctx.Status("Downloading the picture…");
             var url = await ImageUrl(imageId, ctx);
             var bytes = await ZettaHttp.DownloadAsync(url);
             if (bytes == null || bytes.Length == 0) throw new ToolException($"Image #{imageId} downloaded empty.");
+
+            if (replace)
+            {
+                // In place: same file, same import settings, so every material, sprite and prefab using it changes with it.
+                var replaced = ZettaImporter.ReplaceImage(bytes, path, Args.Present(input, "textureType") ? textureType : null);
+                return ToolResult.Ok($"Replaced {replaced} with image #{imageId} ({bytes.Length / 1024} KB); its import settings are kept. " +
+                                     "The user can undo it from the changes list.");
+            }
 
             var type = ImageContentType(bytes);
             if (type == "image/webp") throw new ToolException("The picture is a WebP, which Unity cannot import as a texture.");

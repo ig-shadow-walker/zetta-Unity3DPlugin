@@ -8,7 +8,7 @@ namespace Zetta3D.Editor
     /// </summary>
     public static class ZettaConfig
     {
-        public const string Version = "0.7.2";
+        public const string Version = "0.7.3";
         public const string ClientName = "unity";
 
         public const string ProductionApi = "https://api.zetta3d.ai/api";

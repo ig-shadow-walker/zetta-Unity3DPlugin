@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.7.3] - 2026-10-30
 
 ### Added
 - Agent: **GLM** (Z.ai) joins the providers you can run the agent on with your own API key: GLM-5.3, GLM-5.3 Flash

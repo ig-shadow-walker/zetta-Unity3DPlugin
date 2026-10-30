@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.7.4] - 2026-10-30
 
 ### Changed
 - Updates: the plugin checks for a newer release every time Unity starts, so a new version shows the next time you

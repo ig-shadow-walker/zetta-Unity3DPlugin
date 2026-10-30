@@ -59,7 +59,7 @@ done
 
 [ -z "$(git status --porcelain)" ] || fail "There are uncommitted changes. Commit them to dev first."
 
-say "Fetching $REMOTE…"
+say "Fetching ${REMOTE}…"
 git fetch --quiet --tags "$REMOTE"
 
 git rev-parse --verify --quiet dev >/dev/null || fail "No local dev branch."

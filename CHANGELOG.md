@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.7.5] - 2026-11-01
 
 ### Added
 - Pipelines: **describe the recipe and it is built for you**, as on the web. Write what the pipeline should do in the

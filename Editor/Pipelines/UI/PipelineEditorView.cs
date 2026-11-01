@@ -65,6 +65,7 @@ namespace Zetta3D.Editor.Pipelines.UI
         VisualElement _recipe;
         NodePaletteView _palette;
         PipelineCanvas _canvas;
+        DescribeRecipe _describe;
         NodeInspector _inspector;
         RunsView _runsView;
         Label _loading;
@@ -467,6 +468,10 @@ namespace Zetta3D.Editor.Pipelines.UI
 
             var canvasBox = new VisualElement().Classes("z-pl-canvas-box");
             canvasBox.Add(_canvas);
+            // DESCRIBE THE RECIPE (2026-10-30) — over the top of the canvas, clear of the zoom buttons and the guide.
+            _describe = new DescribeRecipe(() => _stack.Present, () => Gates);
+            _describe.Drafted += ApplyDraft;
+            canvasBox.Add(_describe);
             var inner = new TwoPaneSplitView(1, 340, TwoPaneSplitViewOrientation.Horizontal);
             inner.Add(canvasBox);
             inner.Add(_inspector);
@@ -475,6 +480,28 @@ namespace Zetta3D.Editor.Pipelines.UI
             outer.Add(inner);
             outer.AddToClassList("z-pl-split");
             _recipe = outer;
+        }
+
+        /// <summary>
+        /// A recipe from a description, put on the canvas as ONE change — Undo brings back what was there — and saved like
+        /// any edit. Only what is new assembles itself; kept steps stay where they were. An untitled pipeline takes the
+        /// recipe's title (the web's rule).
+        /// </summary>
+        void ApplyDraft(PipelineDraft draft)
+        {
+            if (draft?.Graph == null) return;
+            var before = new HashSet<string>(_stack.Present.Nodes.Select(n => n.Id));
+            _selected = null;
+            if (string.IsNullOrWhiteSpace(_title) || _title == "Untitled pipeline")
+            {
+                _title = string.IsNullOrWhiteSpace(draft.Title) ? _title : draft.Title.Trim();
+                _titleField.SetValueWithoutNotify(_title);
+            }
+            Commit(draft.Graph);
+            MarkDirty();
+            var added = draft.Graph.Nodes.Where(n => !before.Contains(n.Id))
+                .OrderBy(n => n.Position.X).ThenBy(n => n.Position.Y).Select(n => n.Id).ToList();
+            _canvas?.Assemble(added);
         }
 
         void OnStudioChanged() => Render();
@@ -508,6 +535,7 @@ namespace Zetta3D.Editor.Pipelines.UI
 
             if (_view != RecipeView || _canvas == null) return;
             _palette.SetHasSeed(hasSeed);
+            _describe?.Refresh();
             _canvas.Show(graph, DataFor);
             _canvas.Select(_selected);
             RenderInspector();

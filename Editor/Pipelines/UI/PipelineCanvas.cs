@@ -102,7 +102,7 @@ namespace Zetta3D.Editor.Pipelines.UI
             Insert(0, grid);
             grid.StretchToParentSize();
 
-            _emptyHint = new Label("Drag a seed in from the left to start.").Classes("z-pl-canvas-hint");
+            _emptyHint = new Label("Drag a seed in from the left to start — or describe the recipe above.").Classes("z-pl-canvas-hint");
             _emptyHint.pickingMode = PickingMode.Ignore;
             Add(_emptyHint);
             _emptyHint.Visible(false);
@@ -446,6 +446,23 @@ namespace Zetta3D.Editor.Pipelines.UI
             var scale = Mathf.Clamp(Mathf.Min((layout.width - 2 * pad) / b.width, (layout.height - 2 * pad) / b.height), MinZoom, 1f);
             var position = new Vector3(layout.width / 2 - b.center.x * scale, layout.height / 2 - b.center.y * scale, 0);
             SetView(position, scale);
+        }
+
+        /// <summary>
+        /// A drafted recipe builds itself (assemble.ts): the recipe is framed, then each new step appears in the order it
+        /// reads — left to right, top to bottom within a column.
+        /// </summary>
+        public void Assemble(IReadOnlyList<string> nodeIds)
+        {
+            if (nodeIds == null || nodeIds.Count == 0) return;
+            for (var i = 0; i < nodeIds.Count; i++)
+            {
+                var view = ViewOf(nodeIds[i]);
+                if (view == null) continue;
+                view.AddToClassList("z-pl-node--arriving");
+                schedule.Execute(() => view.RemoveFromClassList("z-pl-node--arriving")).StartingIn(120 + i * 170);
+            }
+            schedule.Execute(FrameGraph).StartingIn(30);
         }
 
         /// <summary>Frames the graph again the next time it has a size (a newly opened pipeline).</summary>

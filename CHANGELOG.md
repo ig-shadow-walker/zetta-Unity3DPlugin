@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Pipelines: **describe the recipe and it is built for you**, as on the web. Write what the pipeline should do in the
+  box over the canvas — *"a game-ready character from a photo, rigged for Unity"* — and the steps appear on the canvas,
+  wired and set up. With a recipe already there, it changes it instead: *"add AI texturing at the end"* adds one step
+  and keeps the rest. Either way it is one change: **Undo** brings back what was there, and it saves as you go.
+
+### Fixed
+- The Zetta 3D tab could keep Unity's cube icon after the plugin was installed or updated from Git, until Unity was
+  restarted. It now shows the Zetta icon as soon as Unity has imported it.
+
 ## [0.7.4] - 2026-10-30
 
 ### Changed

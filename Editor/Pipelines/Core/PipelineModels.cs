@@ -37,6 +37,17 @@ namespace Zetta3D.Editor.Pipelines
         [JsonProperty("problems")] public List<PipelineProblem> Problems = new List<PipelineProblem>();
     }
 
+    /// <summary>
+    /// A recipe from a description (POST /pipelines/draft, 2026-10-30): a title, one line saying what was made or
+    /// changed, and the graph — laid out, settings only. Nothing is saved; the editor puts it on the canvas.
+    /// </summary>
+    public sealed class PipelineDraft
+    {
+        [JsonProperty("title")] public string Title = "";
+        [JsonProperty("summary")] public string Summary = "";
+        [JsonProperty("graph")] public PipelineGraph Graph = new PipelineGraph();
+    }
+
     public sealed class PipelineLastRun
     {
         [JsonProperty("id")] public long Id;

@@ -498,7 +498,20 @@
 .z-pl-canvas-hint { position: absolute; left: 0; right: 0; top: 0; bottom: 0; -unity-text-align: middle-center; color: var(--z-text-2); }
 
 /* A step on the canvas */
-.z-pl-node { width: 236px; }
+.z-pl-node { width: 236px; transition-property: opacity, scale; transition-duration: 0.32s, 0.32s; transition-timing-function: ease-out-cubic, ease-out-cubic; }
+.z-pl-node--arriving { opacity: 0; scale: 0.92 0.92; }
+
+/* Describe the recipe (2026-10-30): a box over the top of the canvas. */
+.z-pl-describe { position: absolute; top: 10px; left: 0; right: 0; align-items: center; padding: 0 12px; }
+.z-pl-describe-box { width: 100%; max-width: 620px; align-items: flex-end; padding: 4px 4px 4px 10px; border-radius: 12px; border-width: 1px; border-color: var(--z-border); background-color: rgba(31, 28, 23, 0.94); }
+.z-pl-describe-box--busy { border-color: var(--z-signal); }
+.z-pl-describe-mark { color: var(--z-text-2); font-size: 13px; margin: 0 4px 7px 0; }
+.z-pl-describe-input { margin: 0; }
+.z-pl-describe-input .unity-base-text-field__input { min-height: 30px; max-height: 120px; white-space: normal; background-color: rgba(0, 0, 0, 0); border-width: 0; color: var(--z-text); padding: 6px 4px; font-size: 12px; -unity-text-align: upper-left; }
+.z-pl-describe-send { width: 30px; height: 30px; margin: 0 0 0 6px; padding: 0; border-width: 0; border-radius: 8px; background-color: var(--z-text); color: var(--z-void); font-size: 15px; -unity-font-style: bold; -unity-text-align: middle-center; }
+.z-pl-describe-send:hover { background-color: #FFFFFF; }
+.z-pl-describe-send:disabled { opacity: 0.4; }
+.z-pl-describe-line { max-width: 620px; width: 100%; margin-top: 4px; padding: 0 6px; font-size: 11px; color: var(--z-text-2); white-space: normal; }
 .z-pl-node #node-border { background-color: var(--z-raised); border-radius: 12px; border-width: 1px; border-color: #3a352e; }
 .z-pl-node #selection-border { border-radius: 13px; }
 .z-pl-node:checked #node-border, .z-pl-node:hover #node-border { border-color: var(--z-border-strong); }

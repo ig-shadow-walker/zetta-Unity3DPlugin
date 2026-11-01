@@ -93,6 +93,19 @@ namespace Zetta3D.Editor.Pipelines
         public static async Task<ServerEstimate> EstimateAsync(PipelineGraph graph) =>
             (await Call(() => ZettaHttp.PostAsync("/pipelines/estimate", new JObject { ["graph"] = GraphJson(graph) }))).ToObject<ServerEstimate>();
 
+        /// <summary>
+        /// POST /pipelines/draft — a recipe from a description (the web's "Describe the recipe", 2026-10-30). With
+        /// <paramref name="current"/>, the recipe on the canvas is CHANGED as asked: kept steps keep their ids, places and
+        /// settings. Nothing is saved. The graph names only the settings it changes — run it through
+        /// <see cref="RequestBuilder.Normalize"/>. A model call: up to a minute or two, ten a minute.
+        /// </summary>
+        public static async Task<PipelineDraft> DraftAsync(string description, PipelineGraph current = null, ThreeDEntitlements entitlements = null)
+        {
+            var body = new JObject { ["description"] = description };
+            if (current != null) body["graph"] = GraphJson(RequestBuilder.WithRequests(current, entitlements));
+            return (await Call(() => ZettaHttp.PostAsync("/pipelines/draft", body, timeoutSeconds: 240))).ToObject<PipelineDraft>() ?? new PipelineDraft();
+        }
+
         // ─── Runs ────────────────────────────────────────────────────────────────
 
         /// <summary>GET /pipelines/:id/runs — the 50 newest, as the Runs view lists them.</summary>

@@ -168,6 +168,10 @@ pipelines as on [zetta3d.ai/pipelines](https://zetta3d.ai/pipelines).
   <img alt="The Pipelines node canvas: picture seed, remove background, generate 3D, retopology, AI texturing and auto rig, with the Generate 3D step's settings open" src="Documentation~/images/pipelines.png" width="860">
 </p>
 
+- **Describe it** in the box over the canvas — *"a game-ready character from a photo, rigged for Unity"* — and the
+  recipe is built on the canvas, every step wired and set up. With a recipe there, describe a change instead (*"add AI
+  texturing at the end"*, *"use quads"*): what you didn't ask to change stays as it was. **Undo** brings back what was
+  there.
 - Start from a **picture**, a **model**, or **pictures of each side** (a Multi-view seed: front, and back, left and
   right as you have them), then add steps: Remove background, AI edit, Draw views, Isolate parts (one branch per
   part), Generate 3D or Smart 3D — from one picture, or their **Multi-view** steps from pictures of each side —

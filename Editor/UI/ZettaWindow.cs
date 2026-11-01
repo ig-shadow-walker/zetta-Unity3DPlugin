@@ -94,14 +94,14 @@ namespace Zetta3D.Editor
             foreach (var page in Pages) page?.Disable();
         }
 
-        const string Icons = "Packages/com.zetta3d.unity/Editor/UI/Icons/";
+        internal const string Icons = "Packages/com.zetta3d.unity/Editor/UI/Icons/";
 
         /// <summary>
         /// The tab: "Zetta 3D" with the Zetta mark — carrying an upload badge while a newer version is out (blue; red
         /// when the update is required), as the banner shows. Hovering the tab says which version.
         /// The icons are drawn by Documentation~/art/tab-icons.mjs.
         /// </summary>
-        void ShowTitle()
+        internal void ShowTitle()
         {
             var known = ZettaUpdates.Known;
             if (known == null || !known.Available)
@@ -240,5 +240,20 @@ namespace Zetta3D.Editor
         public bool Showing => Root != null && Window != null && Window.PageFor(Window.Page) == this;
 
         protected void ShowNotification(GUIContent content) => Window.ShowNotification(content);
+    }
+
+    /// <summary>
+    /// Shows the tab icon once Unity has imported it. Installing or updating the package from Git compiles and reloads
+    /// the scripts BEFORE the package's other files are imported, so a window open across the update asks for its icon
+    /// while the file isn't there yet, falls back to Unity's cube, and would keep it until the next reload. A folder
+    /// install doesn't show this: its icons were imported long before. Seen 2026-10-30, updating 0.7.3 → 0.7.4.
+    /// </summary>
+    sealed class TabIconImports : AssetPostprocessor
+    {
+        static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
+        {
+            if (!imported.Any(path => path.StartsWith(ZettaWindow.Icons, StringComparison.Ordinal))) return;
+            foreach (var window in Resources.FindObjectsOfTypeAll<ZettaWindow>()) window.ShowTitle();
+        }
     }
 }

@@ -65,7 +65,7 @@ namespace Zetta3D.Editor.Studio
                 Sync();
             };
             c.Add(Field("Polygons", _polygons));
-            _quadLock = ZettaUI.Hint("Quad meshes are available from Basic.").Classes("z-hint--warn").Visible(false);
+            _quadLock = ZettaUI.Hint("Quad meshes are available on paid plans.").Classes("z-hint--warn").Visible(false);
             c.Add(_quadLock);
 
             _r1 = new VisualElement();
@@ -135,7 +135,7 @@ namespace Zetta3D.Editor.Studio
             if (_polygons != null)
             {
                 var quadsAllowed = Ctx?.Gates3D?.AllowsQuadMesh != false;
-                _polygons.SetOptionEnabled("quadrilateral", quadsAllowed, quadsAllowed ? null : "Quad meshes are available from Basic.");
+                _polygons.SetOptionEnabled("quadrilateral", quadsAllowed, quadsAllowed ? null : "Quad meshes are available on paid plans.");
                 _quadLock.Visible(!quadsAllowed);
                 if (!quadsAllowed && _polygonType == "quadrilateral") _polygons.Set("triangle", true);
             }

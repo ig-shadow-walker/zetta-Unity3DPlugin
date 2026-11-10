@@ -557,7 +557,7 @@ namespace Zetta3D.Editor.Studio
                 {
                     string reason = null;
                     if (qualityLocked) reason = "Your plan generates at the default quality — 500,000 polygons. Choosing a quality is available on a paid plan.";
-                    else if (rung == "ultra" && gates?.MaxFaceCount is { } maxFaces && maxFaces < 1_000_000) reason = "Ultra detail is available from Basic.";
+                    else if (rung == "ultra" && gates?.MaxFaceCount is { } maxFaces && maxFaces < 1_000_000) reason = "Ultra detail is available on paid plans.";
                     else if (rung == "low-poly" && gates?.AllowsLowPoly == false) reason = "Low-poly generation is available on a paid plan.";
                     else if (rung == "low-poly" && !caps.LowPoly) reason = "Low-poly generation needs Zetta N1.";
                     quality.SetOptionEnabled(rung, reason == null, reason);
@@ -599,7 +599,7 @@ namespace Zetta3D.Editor.Studio
                     _polygons.SetOptionEnabled("triangle", true);
                     string quadReason = null;
                     if (O.SegmentParts) quadReason = "Not available while segmenting.";
-                    else if (gates?.AllowsQuadMesh == false) quadReason = "Quad meshes are available from Basic.";
+                    else if (gates?.AllowsQuadMesh == false) quadReason = "Quad meshes are available on paid plans.";
                     _polygons.SetOptionEnabled("quadrilateral", quadReason == null, quadReason);
                     polygonsLock = quadReason;
                 }
@@ -691,10 +691,10 @@ namespace Zetta3D.Editor.Studio
             if (O.Model == "n25" && gates.AllowsZettaN25 == false) problems.Add("Zetta N2.5 is available on a paid plan.");
             if (O.Model is "np1" or "np15" && gates.AllowsZettaNp1 == false) problems.Add("Generate Smart 3D is available on a paid plan.");
             if (built.Base == "lowpoly" && gates.AllowsLowPoly == false) problems.Add("Low-poly generation is available on a paid plan.");
-            if ((string)built.Body?["polygonType"] == "quadrilateral" && gates.AllowsQuadMesh == false) problems.Add("Quad meshes are available from Basic.");
+            if ((string)built.Body?["polygonType"] == "quadrilateral" && gates.AllowsQuadMesh == false) problems.Add("Quad meshes are available on paid plans.");
             if (gates.MaxFaceCount is { } maxFaces && maxFaces < 1_000_000)
             {
-                if (built.Modifiers.Contains("detailed_geometry")) problems.Add("Ultra detail is available from Basic.");
+                if (built.Modifiers.Contains("detailed_geometry")) problems.Add("Ultra detail is available on paid plans.");
                 else if (built.Body?["faceCount"] is { } sent && (int)sent >= Math.Min(1_000_000, maxFaces + 1))
                     problems.Add($"Your plan generates up to {maxFaces:N0} polygons. Lower the polygon count, or upgrade.");
             }

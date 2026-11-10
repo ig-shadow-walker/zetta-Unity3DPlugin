@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- Your own API key: the model menu now lists **every model your key can use**, straight from the provider — new
+  models show up as soon as the provider releases them, with no plugin or server update. It's fetched when Unity
+  starts and each time you check a key in Preferences. For Z.ai (GLM), which publishes no model list, the menu keeps
+  the models we've set up.
+
 ## [0.7.5] - 2026-11-01
 
 ### Added

@@ -32,12 +32,65 @@ namespace Zetta3D.Editor.Agent
     /// What the agent can run on, from the server's options — the providers and models for the user's own
     /// keys. Nothing here is hardcoded: the server's list is the truth, so a new or retired model needs no
     /// plugin update. Kept across domain reloads in SessionState.
+    ///
+    /// EVERY MODEL THE USER'S KEY CAN REACH: for each provider with a saved key, the provider itself is asked
+    /// (through the server, with that key) which models it offers, and that list replaces the server's
+    /// starting one. Until it arrives — or if it can't be fetched — the server's list stands.
     /// </summary>
+    [InitializeOnLoad]
     public static class AgentCatalog
     {
         const string CacheKey = "Zetta3D.Agent.Catalog";
+        const string LiveKey = "Zetta3D.Agent.LiveModels";
         static List<AgentProviderInfo> _providers;
+        static Dictionary<string, List<AgentModelInfo>> _live;
+        static readonly HashSet<string> Fetching = new HashSet<string>();
         static bool _loading;
+
+        static AgentCatalog()
+        {
+            // A removed key takes its provider's list with it; a new one is fetched when it's checked.
+            ZettaKeychain.Changed += () =>
+            {
+                var gone = Live.Keys.Where(provider => !ZettaKeychain.Has(provider)).ToList();
+                if (gone.Count == 0) return;
+                foreach (var provider in gone) Live.Remove(provider);
+                SaveLive();
+            };
+        }
+
+        /// <summary>Each provider's own list for the user's key, by provider.</summary>
+        static Dictionary<string, List<AgentModelInfo>> Live
+        {
+            get
+            {
+                if (_live != null) return _live;
+                var cached = SessionState.GetString(LiveKey, "");
+                try
+                {
+                    _live = cached.Length > 0
+                        ? JsonConvert.DeserializeObject<Dictionary<string, List<AgentModelInfo>>>(cached)
+                        : null;
+                }
+                catch (JsonException)
+                {
+                    _live = null;
+                }
+                return _live ??= new Dictionary<string, List<AgentModelInfo>>();
+            }
+        }
+
+        static void SaveLive() => SessionState.SetString(LiveKey, JsonConvert.SerializeObject(Live));
+
+        /// <summary>The providers with each one's own list, where it has been fetched, in place of the server's.</summary>
+        static List<AgentProviderInfo> WithLive(List<AgentProviderInfo> providers)
+        {
+            if (providers == null) return null;
+            foreach (var provider in providers)
+                if (Live.TryGetValue(provider.Key, out var models) && models != null && models.Count > 0)
+                    provider.Models = models;
+            return providers;
+        }
 
         public static event Action Changed;
 
@@ -56,7 +109,7 @@ namespace Zetta3D.Editor.Agent
                     {
                         try
                         {
-                            _providers = JsonConvert.DeserializeObject<List<AgentProviderInfo>>(cached);
+                            _providers = WithLive(JsonConvert.DeserializeObject<List<AgentProviderInfo>>(cached));
                         }
                         catch (JsonException)
                         {
@@ -76,9 +129,10 @@ namespace Zetta3D.Editor.Agent
             {
                 var options = await ZettaHttp.GetAsync("/unityAgent/options") as JObject;
                 var providers = options?["providers"] is JArray list ? list.ToObject<List<AgentProviderInfo>>() : null;
-                _providers = providers;
                 SessionState.SetString(CacheKey, providers == null ? "" : JsonConvert.SerializeObject(providers));
+                _providers = WithLive(providers);
                 Changed?.Invoke();
+                RefreshKeyedModels();
             }
             catch (Exception)
             {
@@ -87,6 +141,44 @@ namespace Zetta3D.Editor.Agent
             finally
             {
                 _loading = false;
+            }
+        }
+
+        /// <summary>Asks every provider with a saved key for its models — see <see cref="RefreshModelsAsync"/>.</summary>
+        public static void RefreshKeyedModels()
+        {
+            foreach (var provider in KeyedProviders) _ = RefreshModelsAsync(provider.Key);
+        }
+
+        /// <summary>
+        /// The provider's own list of the models the user's key can reach, through the server (the key goes in a
+        /// header and is kept nowhere). It replaces the server's starting list; on any failure that list stays.
+        /// </summary>
+        public static async Task RefreshModelsAsync(string providerKey)
+        {
+            if (!ZettaAuth.IsSignedIn || Provider(providerKey) == null || !Fetching.Add(providerKey)) return;
+            try
+            {
+                var key = ZettaKeychain.Get(providerKey);
+                if (string.IsNullOrEmpty(key)) return;
+                var answer = await ZettaHttp.PostAsync("/unityAgent/provider-models", new JObject { ["provider"] = providerKey },
+                    new Dictionary<string, string> { ["X-Zetta-Provider-Key"] = key }, 30) as JObject;
+                if (answer?["ok"]?.Value<bool>() != true || !(answer["models"] is JArray list)) return;
+                var models = list.ToObject<List<AgentModelInfo>>();
+                if (models == null || models.Count == 0) return;
+                Live[providerKey] = models;
+                SaveLive();
+                var provider = Provider(providerKey);
+                if (provider != null) provider.Models = models;
+                Changed?.Invoke();
+            }
+            catch (Exception)
+            {
+                // Offline, an older server, or the provider said no: the server's list still works.
+            }
+            finally
+            {
+                Fetching.Remove(providerKey);
             }
         }
 

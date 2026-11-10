@@ -362,6 +362,8 @@ namespace Zetta3D.Editor.Studio
                     var ok = answer?["ok"]?.Value<bool>() == true;
                     status.text = ok ? "The key works." : answer?["message"]?.ToString() ?? "The key didn't work.";
                     status.EnableInClassList(ok ? "z-success" : "z-error", true);
+                    // A working key: its provider's own model list replaces the server's starting one.
+                    if (ok) _ = Agent.AgentCatalog.RefreshModelsAsync(provider.Key);
                 }
                 catch (ZettaApiException e)
                 {

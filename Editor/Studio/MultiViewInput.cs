@@ -140,7 +140,7 @@ namespace Zetta3D.Editor.Studio
         public void SetBudget(int? maxViews)
         {
             _budget = Mathf.Clamp(maxViews ?? 4, 0, 4);
-            _budgetReason = _budget < 4 ? $"Your plan uses up to {_budget} views. All 4 are available from Basic." : null;
+            _budgetReason = _budget < 4 ? $"Your plan uses up to {_budget} views. All 4 are available on paid plans." : null;
             Sync();
         }
 

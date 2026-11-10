@@ -354,7 +354,7 @@ namespace Zetta3D.Editor.Pipelines.UI
         {
             Choice(host, ctx, "Engine", "engine", ToolSettings.RetopologyEngines, v => ToolSettings.RetopologyEngines.FirstOrDefault(o => o.Value == v)?.Hint, "r1");
             var polygons = Choice(host, ctx, "Polygons", "polygonType", ToolSettings.PolygonTypes, null, "triangle");
-            var quadLock = ZettaUI.Hint("Quad meshes are available from Basic.").Classes("z-hint--warn");
+            var quadLock = ZettaUI.Hint("Quad meshes are available on paid plans.").Classes("z-hint--warn");
             host.Add(quadLock);
 
             var r1 = new VisualElement();
@@ -398,7 +398,7 @@ namespace Zetta3D.Editor.Pipelines.UI
                     ? "Quads halve the ceiling. Zetta R1 aims for your count, then settles on the cleanest topology near it."
                     : "Zetta R1 aims for this count, then settles on the cleanest topology near it.";
                 var quadsAllowed = FormContext.Studio.Gates3D?.AllowsQuadMesh != false;
-                polygons.SetOptionEnabled("quadrilateral", quadsAllowed, quadsAllowed ? null : "Quad meshes are available from Basic.");
+                polygons.SetOptionEnabled("quadrilateral", quadsAllowed, quadsAllowed ? null : "Quad meshes are available on paid plans.");
                 quadLock.Visible(!quadsAllowed);
             });
         }
@@ -790,7 +790,7 @@ namespace Zetta3D.Editor.Pipelines.UI
                 {
                     string reason = null;
                     if (qualityLocked) reason = "Your plan generates at the default quality — 500,000 polygons. Choosing a quality is available on a paid plan.";
-                    else if (q == "ultra" && gates?.MaxFaceCount is { } maxFaces && maxFaces < 1_000_000) reason = "Ultra detail is available from Basic.";
+                    else if (q == "ultra" && gates?.MaxFaceCount is { } maxFaces && maxFaces < 1_000_000) reason = "Ultra detail is available on paid plans.";
                     else if (q == "low-poly" && gates?.AllowsLowPoly == false) reason = "Low-poly generation is available on a paid plan.";
                     else if (q == "low-poly" && !caps.LowPoly) reason = "Low-poly generation needs Zetta N1.";
                     rung.SetOptionEnabled(q, reason == null, reason);
@@ -829,7 +829,7 @@ namespace Zetta3D.Editor.Pipelines.UI
                 {
                     polygons.SetOptionEnabled("triangle", true);
                     if (segment) polygonsReason = "Not available while segmenting.";
-                    else if (gates?.AllowsQuadMesh == false) polygonsReason = "Quad meshes are available from Basic.";
+                    else if (gates?.AllowsQuadMesh == false) polygonsReason = "Quad meshes are available on paid plans.";
                     polygons.SetOptionEnabled("quadrilateral", polygonsReason == null, polygonsReason);
                 }
                 polygonsLock.text = polygonsReason ?? "";

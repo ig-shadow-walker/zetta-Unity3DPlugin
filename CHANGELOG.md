@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.7.6] - 2026-11-10
 
 ### Changed
 - Your own API key: the model menu now lists **every model your key can use**, straight from the provider — new

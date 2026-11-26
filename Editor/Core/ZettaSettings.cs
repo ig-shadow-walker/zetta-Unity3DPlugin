@@ -93,6 +93,16 @@ namespace Zetta3D.Editor
             set => EditorPrefs.SetString("Zetta3D.Agent.Provider", value);
         }
 
+        /// <summary>How far the agent chat's text is from its standard size, in points — the A− / A+ in its toolbar.</summary>
+        public const int AgentTextSizeMin = -2;
+        public const int AgentTextSizeMax = 8;
+
+        public static int AgentTextSize
+        {
+            get => Math.Max(AgentTextSizeMin, Math.Min(AgentTextSizeMax, EditorPrefs.GetInt("Zetta3D.Agent.TextSize", 0)));
+            set => EditorPrefs.SetInt("Zetta3D.Agent.TextSize", Math.Max(AgentTextSizeMin, Math.Min(AgentTextSizeMax, value)));
+        }
+
         /// <summary>The model last used with a provider, so switching back finds it again.</summary>
         public static string AgentModelFor(string provider) => EditorPrefs.GetString("Zetta3D.Agent.Model." + provider, "");
 

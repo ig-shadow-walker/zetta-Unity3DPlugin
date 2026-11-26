@@ -129,6 +129,16 @@ namespace Zetta3D.Editor.Agent
                 RenderTranscript();
             }, "z-button--ghost", "z-button--small"));
             bar.Add(ZettaUI.Spacer());
+            // Text size: smaller and larger, kept for next time — also ⌘− / ⌘= (Ctrl on Windows), ⌘0 back to standard.
+            var key = Application.platform == RuntimePlatform.OSXEditor ? "⌘" : "Ctrl+";
+            _smaller = ZettaUI.Button("A−", () => SetTextSize(ZettaPrefs.AgentTextSize - 1), "z-button--ghost", "z-button--small");
+            _smaller.tooltip = $"Smaller text ({key}−). {key}0 sets it back.";
+            bar.Add(_smaller);
+            _larger = ZettaUI.Button("A+", () => SetTextSize(ZettaPrefs.AgentTextSize + 1), "z-button--ghost", "z-button--small");
+            _larger.tooltip = $"Larger text ({key}=). {key}0 sets it back.";
+            bar.Add(_larger);
+            SyncTextSizeButtons();
+            shell.RegisterCallback<KeyDownEvent>(TextSizeKeys, TrickleDown.TrickleDown);
             _memoryButton = ZettaUI.Button("Memory", ToggleMemory, "z-button--ghost", "z-button--small");
             _memoryButton.tooltip = "What the agent remembers about this project, and its brief";
             bar.Add(_memoryButton);
@@ -155,6 +165,7 @@ namespace Zetta3D.Editor.Agent
             shell.Add(_phase);
 
             shell.Add(BuildComposer());
+            ApplyTextSize(_input);
 
             // The @ picker floats above the message box, inside the chat.
             _mentionPopup = new MentionPopup();
@@ -803,6 +814,7 @@ namespace Zetta3D.Editor.Agent
                 _rows.Clear();
                 _list.Clear();
                 _welcome = Welcome();
+                ApplyTextSize(_welcome);
                 _list.Add(_welcome);
             }
             else
@@ -828,6 +840,7 @@ namespace Zetta3D.Editor.Agent
                     {
                         if (_rows[i].signature == signature) continue;
                         var fresh = Render(item);
+                        ApplyTextSize(fresh);
                         var index = _list.IndexOf(_rows[i].element);
                         _rows[i].element.RemoveFromHierarchy();
                         _list.Insert(Math.Max(0, index), fresh);
@@ -836,6 +849,7 @@ namespace Zetta3D.Editor.Agent
                     else
                     {
                         var element = Render(item);
+                        ApplyTextSize(element);
                         _list.Add(element);
                         _rows.Add((item, signature, element));
                     }
@@ -930,12 +944,18 @@ namespace Zetta3D.Editor.Agent
                 case "user":
                 {
                     var box = new VisualElement().Classes("z-msg", "z-msg--user");
-                    box.Add(new Label(item.Text).Classes("z-msg-text"));
+                    var text = new Label(item.Text).Classes("z-msg-text");
+#if UNITY_2022_2_OR_NEWER
+                    text.selection.isSelectable = true;
+#endif
+                    box.Add(text);
                     if (!string.IsNullOrEmpty(item.Detail)) box.Add(ZettaUI.Hint(item.Detail));
-                    return box;
+                    return WithCopy(box, item.Text, true);
                 }
                 case "assistant":
-                    return new VisualElement().Classes("z-msg", "z-msg--assistant").Children(AgentMarkdown.Render(item.Text));
+                    return WithCopy(
+                        new VisualElement().Classes("z-msg", "z-msg--assistant").Children(AgentMarkdown.Render(item.Text)),
+                        item.Text, false);
                 case "route":
                     // Older conversations may still hold route lines; they are no longer shown.
                     return new VisualElement().Visible(false);
@@ -1308,6 +1328,82 @@ namespace Zetta3D.Editor.Agent
         VisualElement _historyPanel;
         Button _historyButton;
         Button _memoryButton;
+        Button _smaller;
+        Button _larger;
+
+        /// <summary>
+        /// A message with a Copy button under it, shown while the pointer is over the message. It copies the words as
+        /// written — the reply's Markdown included, so it pastes with its code blocks and lists intact.
+        /// </summary>
+        static VisualElement WithCopy(VisualElement message, string text, bool user)
+        {
+            var wrap = new VisualElement().Classes("z-msg-wrap", user ? "z-msg-wrap--user" : "z-msg-wrap--assistant");
+            wrap.Add(message);
+            var actions = new VisualElement().Classes("z-row", "z-msg-actions");
+            Button copy = null;
+            copy = ZettaUI.Button("Copy", () =>
+            {
+                EditorGUIUtility.systemCopyBuffer = text ?? "";
+                copy.text = "Copied";
+                actions.AddToClassList("z-msg-actions--shown");
+                copy.schedule.Execute(() =>
+                {
+                    copy.text = "Copy";
+                    actions.RemoveFromClassList("z-msg-actions--shown");
+                }).StartingIn(1500);
+            }, "z-button--ghost", "z-button--small", "z-msg-copy");
+            copy.tooltip = user ? "Copy your message" : "Copy the reply";
+            actions.Add(copy);
+            wrap.Add(actions);
+            return wrap;
+        }
+
+        /// <summary>The chat's text at its standard size — each moves by the same step when the user resizes it.</summary>
+        static readonly (string className, int size)[] TextSizes =
+        {
+            ("z-msg-text", 12), ("z-text", 12), ("z-hint", 11), ("z-step-text", 11), ("z-section-title", 13),
+            ("unity-base-text-field__input", 12),
+        };
+
+        /// <summary>The chat's text size on everything under <paramref name="root"/> — the user's choice, or the standard.</summary>
+        static void ApplyTextSize(VisualElement root)
+        {
+            if (root == null) return;
+            var step = ZettaPrefs.AgentTextSize;
+            foreach (var (className, size) in TextSizes)
+                root.Query(className: className).ForEach(element =>
+                    element.style.fontSize = step == 0 ? new StyleLength(StyleKeyword.Null) : new StyleLength(size + step));
+        }
+
+        void SetTextSize(int step)
+        {
+            ZettaPrefs.AgentTextSize = step;
+            ApplyTextSize(_list);
+            ApplyTextSize(_input);
+            SyncTextSizeButtons();
+        }
+
+        void SyncTextSizeButtons()
+        {
+            _smaller?.SetEnabled(ZettaPrefs.AgentTextSize > ZettaPrefs.AgentTextSizeMin);
+            _larger?.SetEnabled(ZettaPrefs.AgentTextSize < ZettaPrefs.AgentTextSizeMax);
+        }
+
+        /// <summary>⌘= / ⌘− / ⌘0 (Ctrl on Windows) anywhere in the chat: larger, smaller, standard.</summary>
+        void TextSizeKeys(KeyDownEvent e)
+        {
+            if (!e.actionKey) return;
+            int? next = e.keyCode switch
+            {
+                KeyCode.Equals or KeyCode.Plus or KeyCode.KeypadPlus => ZettaPrefs.AgentTextSize + 1,
+                KeyCode.Minus or KeyCode.KeypadMinus => ZettaPrefs.AgentTextSize - 1,
+                KeyCode.Alpha0 or KeyCode.Keypad0 => 0,
+                _ => null,
+            };
+            if (next == null) return;
+            SetTextSize(next.Value);
+            e.StopImmediatePropagation();
+        }
         List<JToken> _sessions = new List<JToken>();
         string _historyFilter = "";
         VisualElement _historyList;

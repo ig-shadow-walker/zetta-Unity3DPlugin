@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Agent chat: **Copy** under every message — yours and the agent's. Hover a message to see it; a reply copies as
+  written, code blocks and lists included. Your own messages can now be selected too.
+- Agent chat: **text size**. **A−** and **A+** in the chat's toolbar make the conversation and the message box smaller
+  or larger, and the size is kept for next time. Shortcuts: ⌘− / ⌘= (Ctrl on Windows), and ⌘0 for the standard size.
+
 ## [0.7.6] - 2026-11-10
 
 ### Changed

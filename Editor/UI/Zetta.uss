@@ -661,6 +661,16 @@
 .z-approval .z-button { margin: 8px 8px 0 0; }
 .z-agent-phase { margin: 0 20px 6px 20px; }
 
+/* Copy under each message (2026-11-26): there while the pointer is over the message, and for a moment after a copy. */
+.z-msg-wrap { flex-shrink: 0; }
+.z-msg-wrap--user { align-self: flex-end; max-width: 85%; align-items: flex-end; }
+.z-msg-wrap--user > .z-msg--user { max-width: 100%; margin-bottom: 0; }
+.z-msg-wrap--assistant > .z-msg--assistant { margin-bottom: 0; }
+.z-msg-actions { height: 20px; opacity: 0; transition-property: opacity; transition-duration: 0.12s; }
+.z-msg-wrap:hover .z-msg-actions,
+.z-msg-actions--shown { opacity: 1; }
+.z-msg-copy { margin: 0; height: 18px; padding: 0 6px; font-size: 10px; color: var(--z-text-2); }
+
 .z-composer { padding: 10px 16px 16px 16px; background-color: var(--z-void); border-top-width: 1px; border-top-color: var(--z-border); }
 .z-composer-box { border-radius: 14px; border-width: 1px; border-color: var(--z-border); background-color: var(--z-raised); padding: 6px 8px; }
 .z-composer-attachments { margin: 2px 2px 0 2px; }

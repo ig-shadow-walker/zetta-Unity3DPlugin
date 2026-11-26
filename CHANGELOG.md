@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.7.7] - 2026-11-26
 
 ### Added
 - Agent chat: **Copy** under every message — yours and the agent's. Hover a message to see it; a reply copies as
